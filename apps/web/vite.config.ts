@@ -9,17 +9,16 @@ const headersWithApiOrigin = (apiBaseUrl: string | undefined): Plugin => ({
   name: "kunjae-headers-api-origin",
   apply: "build",
   closeBundle() {
-    if (apiBaseUrl === undefined || apiBaseUrl === "") {
-      throw new Error("VITE_API_BASE_URL is required to build _headers");
-    }
-    const file = resolve(__dirname, "dist/_headers");
-    const origin = new URL(apiBaseUrl).origin;
-    writeFileSync(file, readFileSync(file, "utf8").replaceAll("__API_ORIGIN__", origin));
+    const file = resolve(import.meta.dirname, "dist/_headers");
+    const origin = apiBaseUrl === undefined || apiBaseUrl === "" ? "" : new URL(apiBaseUrl).origin;
+    if (origin === "") this.warn("VITE_API_BASE_URL not set — connect-src allows 'self' only");
+    const headers = readFileSync(file, "utf8").replaceAll(origin === "" ? " __API_ORIGIN__" : "__API_ORIGIN__", origin);
+    writeFileSync(file, headers);
   },
 });
 
 export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, __dirname, "VITE_");
+  const env = loadEnv(mode, import.meta.dirname, "VITE_");
 
   return {
     plugins: [react(), tailwindcss(), headersWithApiOrigin(env["VITE_API_BASE_URL"])],
