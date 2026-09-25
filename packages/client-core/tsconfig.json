@@ -1,0 +1,15 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "noEmit": true,
+
+    /* แพ็กเกจนี้ต้องรันได้ทั้งในแท็บของเบราว์เซอร์และใน service worker
+       ของส่วนขยาย จึงใช้ชนิดข้อมูลของ DOM ได้ แต่ห้ามแตะที่เก็บถาวร
+       ซึ่งบังคับด้วย ESLint (หมวด 5.7) ไม่ใช่ด้วยการตัด lib */
+    "lib": ["ES2022", "DOM"],
+    "types": [],
+    "allowImportingTsExtensions": true
+  },
+  "include": ["src/**/*.ts"]
+}

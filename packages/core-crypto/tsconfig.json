@@ -1,0 +1,15 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "noEmit": true,
+    "lib": ["ES2022", "DOM"],
+    "types": [],
+
+    /* อนุญาตให้ import ด้วยนามสกุล .ts ตรงๆ
+       ทำได้เพราะ noEmit: true (เราไม่ได้คอมไพล์ออกเป็นไฟล์)
+       ประโยชน์: path เดียวใช้ได้ทั้ง Node (ESM ต้องมีนามสกุล) และ bundler ทุกตัว */
+    "allowImportingTsExtensions": true
+  },
+  "include": ["src/**/*.ts"]
+}

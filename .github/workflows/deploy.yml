@@ -1,0 +1,120 @@
+name: Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "จะ deploy อะไร"
+        required: true
+        type: choice
+        default: both
+        options: [api, web, both]
+      run_migrations:
+        description: "รัน D1 migration ด้วย (ถอยกลับไม่ได้)"
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    name: ด่านเดิมต้องผ่านก่อนเสมอ
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: package.json
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm turbo run typecheck lint build
+
+  api:
+    name: Worker (API)
+    needs: verify
+    if: inputs.target == 'api' || inputs.target == 'both'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: package.json
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      - name: D1 migration
+        if: inputs.run_migrations
+        working-directory: apps/api
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: pnpm exec wrangler d1 migrations apply kunjae --remote
+
+      - name: deploy Worker
+        working-directory: apps/api
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: pnpm exec wrangler deploy
+
+      - name: ตรวจว่ายังมีชีวิตหลัง deploy
+        env:
+          API_BASE_URL: ${{ vars.API_BASE_URL }}
+        run: |
+          set -euo pipefail
+          test -n "${API_BASE_URL}" || { echo "::error::ยังไม่ได้ตั้งตัวแปร API_BASE_URL"; exit 1; }
+          curl -fsS "${API_BASE_URL}/health" | grep -q '"ok"'
+          echo "API ตอบกลับปกติ"
+
+  web:
+    name: Pages (หน้าเว็บ)
+    needs: verify
+    if: inputs.target == 'web' || inputs.target == 'both'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: package.json
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      - name: build หน้าเว็บ
+        env:
+          VITE_API_BASE_URL: ${{ vars.API_BASE_URL }}
+        run: |
+          set -euo pipefail
+          test -n "${VITE_API_BASE_URL}" || { echo "::error::ยังไม่ได้ตั้งตัวแปร API_BASE_URL"; exit 1; }
+          case "${VITE_API_BASE_URL}" in
+            https://*) ;;
+            *) echo "::error::API_BASE_URL ต้องเป็น https"; exit 1 ;;
+          esac
+          pnpm --filter @kunjae/web build
+
+      - name: _headers ต้องอนุญาต origin ของ API
+        env:
+          API_BASE_URL: ${{ vars.API_BASE_URL }}
+        run: |
+          set -euo pipefail
+          grep -q "connect-src[^;]*${API_BASE_URL}" apps/web/dist/_headers || {
+            echo "::error::connect-src ใน _headers ไม่มี ${API_BASE_URL} — แอปจะยิงคำขอไม่ออก"
+            exit 1
+          }
+          echo "CSP อนุญาต ${API_BASE_URL} แล้ว"
+
+      - name: deploy Pages
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: pnpm --filter @kunjae/api exec wrangler pages deploy ../web/dist --project-name kunjae

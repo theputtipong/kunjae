@@ -1,0 +1,53 @@
+{
+  "description": "AES-256-GCM ผ่านรูปแบบ Envelope พร้อมการผูก header เข้ากับ AAD",
+  "algorithm": {
+    "name": "AES-256-GCM",
+    "keyBytes": 32,
+    "nonceBytes": 12,
+    "tagBytes": 16,
+    "note": "ciphertext รวม authentication tag ไว้ท้ายสุดแล้ว"
+  },
+  "aadConstruction": {
+    "note": "AAD ที่ส่งเข้า AEAD จริงคือ header ของ envelope ต่อด้วย AAD ของผู้เรียก",
+    "headerTemplate": "kunjae.env.{v}.{alg}|",
+    "example": {
+      "envelopeHeader": "kunjae.env.1.A256GCM|",
+      "callerAad": "kunjae.v1.item|01J8ZQK9P0Z8YXWVTSRQNMKJHG|1",
+      "combined": "kunjae.env.1.A256GCM|kunjae.v1.item|01J8ZQK9P0Z8YXWVTSRQNMKJHG|1",
+      "combinedHex": "6b756e6a61652e656e762e312e4132353647434d7c6b756e6a61652e76312e6974656d7c30314a385a514b3950305a3859585756545352514e4d4b4a48477c31"
+    }
+  },
+  "decrypt": {
+    "keyHex": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+    "itemId": "01J8ZQK9P0Z8YXWVTSRQNMKJHG",
+    "version": 1,
+    "envelope": {
+      "v": 1,
+      "alg": "A256GCM",
+      "n": "EQh2kifwivvcY3NI",
+      "ct": "NCcAitaCEot58mx01wF-mPR3V5fWHvbp3LvC2pzZNj07_Yzovw"
+    },
+    "expectedPlaintext": "{\"hello\":\"โลก\"}",
+    "expectedPlaintextHex": "7b2268656c6c6f223a22e0b982e0b8a5e0b881227d"
+  },
+  "mustFail": [
+    {
+      "reason": "version ไม่ตรง (rollback)",
+      "itemId": "01J8ZQK9P0Z8YXWVTSRQNMKJHG",
+      "version": 2
+    },
+    {
+      "reason": "itemId ไม่ตรง (swap)",
+      "itemId": "01J8ZQK9P0Z8YXWVTSRQNMKJHH",
+      "version": 1
+    },
+    {
+      "reason": "alg ถูกแก้",
+      "envelopeAlg": "A128GCM"
+    },
+    {
+      "reason": "v ถูกแก้",
+      "envelopeVersion": 2
+    }
+  ]
+}

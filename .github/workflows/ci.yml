@@ -1,0 +1,99 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  commits:
+    name: ข้อความ commit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          if git cat-file -e "${BASE}^{commit}" 2>/dev/null; then
+            COMMITS=$(git rev-list "${BASE}..${HEAD}")
+          else
+            COMMITS=$(git rev-list -n 20 "${HEAD}")
+          fi
+          for c in ${COMMITS}; do
+            git log -1 --format=%B "$c" > "${RUNNER_TEMP}/msg"
+            sh .githooks/commit-msg "${RUNNER_TEMP}/msg" || { echo "::error::commit $c"; exit 1; }
+          done
+
+  typescript:
+    name: TypeScript — typecheck · lint · build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: package.json
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm turbo run typecheck lint build
+
+      - name: ชุดเวกเตอร์ต้องสร้างซ้ำได้ผลเดิม
+        run: |
+          pnpm --filter @kunjae/crypto-spec generate
+          git diff --exit-code -- packages/crypto-spec/vectors
+
+  audit:
+    name: ตรวจช่องโหว่ของ dependency
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: package.json
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm audit --audit-level=moderate
+
+  kotlin:
+    name: Kotlin — เวกเตอร์ข้ามภาษาต้องตรงกันทุกบิต
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@v5
+
+      - name: verifyVectors
+        working-directory: apps/android
+        run: ./gradlew verifyVectors --no-daemon
+
+      - name: ด่านตัดสินการเติมอัตโนมัติ (ฟังก์ชันบริสุทธิ์ ไม่ต้องมีเครื่องจำลอง)
+        working-directory: apps/android
+        run: ./gradlew verifyAutofill --no-daemon
+
+      - name: build Android เวอร์ชันจริง (ไม่ลงนาม) — ให้ R8 ทำงานจริง
+        working-directory: apps/android
+        env:
+          KUNJAE_RELEASE_API_BASE_URL: https://api.invalid
+        run: ./gradlew :app:assembleRelease --no-daemon

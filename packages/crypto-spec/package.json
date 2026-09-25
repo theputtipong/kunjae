@@ -1,0 +1,20 @@
+{
+  "name": "@kunjae/crypto-spec",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Cross-platform cryptographic specification and test vectors. The contract that keeps TypeScript and Kotlin in agreement.",
+  "license": "MIT",
+
+  "scripts": {
+    "generate": "node --experimental-strip-types scripts/generate-vectors.ts",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf .turbo node_modules *.tsbuildinfo"
+  },
+
+  "dependencies": {
+    "@kunjae/contracts": "workspace:*",
+    "@kunjae/core-crypto": "workspace:*",
+    "@kunjae/domain": "workspace:*"
+  }
+}

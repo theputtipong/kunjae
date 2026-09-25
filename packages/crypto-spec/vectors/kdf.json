@@ -1,0 +1,49 @@
+{
+  "description": "HKDF-SHA256 และ Argon2id ต้องให้ผลลัพธ์ตรงกันทุกไบต์",
+  "hkdf": {
+    "hash": "SHA-256",
+    "note": "info คือข้อความ UTF-8 ของ purpose ส่วน salt กับ ikm เป็นไบต์ดิบ",
+    "cases": [
+      {
+        "purpose": "kunjae.v1.authentication",
+        "ikmHex": "0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b",
+        "saltHex": "2222222222222222222222222222222222222222222222222222222222222222",
+        "lengthBytes": 32,
+        "okmHex": "4317f9374721dfc99fcea2ded53f92316430ccc570c750f809519fba982a447c"
+      },
+      {
+        "purpose": "kunjae.v1.vault-key-wrapping",
+        "ikmHex": "0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b",
+        "saltHex": "2222222222222222222222222222222222222222222222222222222222222222",
+        "lengthBytes": 32,
+        "okmHex": "ccfaf4279e1855a92fd3ceb19939529e3bc69ce2ffd44deb16d9b5c041eb94c9"
+      },
+      {
+        "purpose": "kunjae.v1.secret-key-stretch",
+        "ikmHex": "0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b",
+        "saltHex": "2222222222222222222222222222222222222222222222222222222222222222",
+        "lengthBytes": 32,
+        "okmHex": "f2fc929acbdda94c8f9a1c791464b49ced6e57fce0f964bf089db9ee15d4d833"
+      },
+      {
+        "purpose": "kunjae.v1.master-unlock-key",
+        "ikmHex": "0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b",
+        "saltHex": "2222222222222222222222222222222222222222222222222222222222222222",
+        "lengthBytes": 32,
+        "okmHex": "1278ddcd4182b1a81e52d165f244c106214dd1e33ddc890fb978d838f2f65f9e"
+      }
+    ]
+  },
+  "argon2id": {
+    "note": "รหัสผ่านถูกแปลงเป็นไบต์ด้วย UTF-8 ก่อนส่งเข้า KDF",
+    "params": {
+      "memoryKiB": 65536,
+      "iterations": 3,
+      "parallelism": 1,
+      "hashLength": 32
+    },
+    "passwordUtf8": "correct horse battery staple",
+    "saltHex": "02020202020202020202020202020202",
+    "outputHex": "1096810449d933301800a640fd5cade6dfa0a9d07987e909a9fde0235baa5309"
+  }
+}

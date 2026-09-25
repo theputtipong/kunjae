@@ -1,0 +1,22 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "noEmit": true,
+
+    /* ── ชนิดข้อมูลของ Workers runtime ────────────────────────────────
+     * worker-configuration.d.ts ถูกสร้างโดย `pnpm typegen` (wrangler types)
+     * ซึ่งอ่าน wrangler.jsonc แล้วประกาศชนิดของ env ให้ตรงกับ binding จริง
+     *
+     * ข้อดีเทียบกับการติดตั้ง @cloudflare/workers-types เอง:
+     *   - ไม่มี dependency เพิ่ม (ตรงกับนโยบาย supply chain ของโปรเจกต์)
+     *   - ชนิดของ env.DB มาจากไฟล์ตั้งค่าจริง ไม่ใช่สิ่งที่เราพิมพ์ซ้ำเอง
+     *     ถ้าลบ binding ออกจาก wrangler.jsonc โค้ดที่ยังใช้อยู่จะไม่ผ่าน typecheck
+     */
+    "types": ["./worker-configuration.d.ts"],
+
+    /* เรา import ซอร์ส .ts ของ package ในเครือโดยตรง (ADR ข้อ 4-5) */
+    "allowImportingTsExtensions": true
+  },
+  "include": ["src/**/*.ts", "drizzle.config.ts", "worker-configuration.d.ts"]
+}

@@ -1,0 +1,27 @@
+{
+  "description": "การคำนวณกุญแจทั้งสายจาก Master Password กับ Secret Key จนถึง Auth Key และ Wrapping Key",
+  "procedure": [
+    "kPassword = Argon2id(utf8(masterPassword), accountSalt, params)",
+    "kSecret   = HKDF-SHA256(ikm=secretKey, salt=accountSalt, info=\"kunjae.v1.secret-key-stretch\", len=32)",
+    "MUK       = HKDF-SHA256(ikm=kPassword||kSecret, salt=accountSalt, info=\"kunjae.v1.master-unlock-key\", len=32)",
+    "authKey   = HKDF-SHA256(ikm=MUK, salt=accountSalt, info=\"kunjae.v1.authentication\", len=32)",
+    "wrapKey   = HKDF-SHA256(ikm=MUK, salt=accountSalt, info=\"kunjae.v1.vault-key-wrapping\", len=32)"
+  ],
+  "input": {
+    "masterPassword": "MyStr0ng!Pass รหัสไทย",
+    "secretKeyHex": "8f2a1c7b93e4d05a6f18c2b47d903e51",
+    "accountSaltHex": "3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f",
+    "argon2": {
+      "memoryKiB": 65536,
+      "iterations": 3,
+      "parallelism": 1,
+      "hashLength": 32
+    }
+  },
+  "expected": {
+    "mukHex": "2cbc9ea80da5838af2da8147b1b4a8ee5faa13f80de8187ffde89f40d443b937",
+    "authKeyHex": "fedfc6dbe6bd9e2d8beb7bae965bcfbbf967bb8899134944018dca8651cecde1",
+    "wrappingKeyHex": "9211691e617b771ca460531fd1dfaa2a30c2cf20263ffd57954c48663762cc6e",
+    "authKeyBase64Url": "_t_G2-a9ni2L63uullvPu_lnu4iZE0lEAY3KhlHOzeE"
+  }
+}

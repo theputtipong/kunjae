@@ -1,0 +1,93 @@
+{
+  "description": "แปลงระหว่างไบต์กับข้อความสามรูปแบบ ผลลัพธ์ต้องตรงกันทุกอักขระ",
+  "note": "base32 ใช้ชุดอักขระ Crockford (ไม่มี I L O U) และ base64url ไม่มี padding",
+  "encode": [
+    {
+      "label": "ว่างเปล่า",
+      "bytesHex": "",
+      "hex": "",
+      "base32": "",
+      "base64url": ""
+    },
+    {
+      "label": "หนึ่งไบต์",
+      "bytesHex": "00",
+      "hex": "00",
+      "base32": "00",
+      "base64url": "AA"
+    },
+    {
+      "label": "ค่าสูงสุดหนึ่งไบต์",
+      "bytesHex": "ff",
+      "hex": "ff",
+      "base32": "ZW",
+      "base64url": "_w"
+    },
+    {
+      "label": "ลำดับ 0-7",
+      "bytesHex": "0001020304050607",
+      "hex": "0001020304050607",
+      "base32": "000G40R40M30E",
+      "base64url": "AAECAwQFBgc"
+    },
+    {
+      "label": "กุญแจ 16 ไบต์",
+      "bytesHex": "8f2a1c7b93e4d05a6f18c2b47d903e51",
+      "hex": "8f2a1c7b93e4d05a6f18c2b47d903e51",
+      "base32": "HWN1RYWKWK85MVRRRAT7V41YA4",
+      "base64url": "jyoce5Pk0FpvGMK0fZA-UQ"
+    },
+    {
+      "label": "กุญแจ 32 ไบต์",
+      "bytesHex": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+      "hex": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+      "base32": "000G40R40M30E209185GR38E1W8124GK2GAHC5RR34D1P70X3RFG",
+      "base64url": "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8"
+    },
+    {
+      "label": "nonce 12 ไบต์",
+      "bytesHex": "cafebabefacedbaddecaf888",
+      "hex": "cafebabefacedbaddecaf888",
+      "base32": "SBZBNFQTSVDTVQPAZ240",
+      "base64url": "yv66vvrO263eyviI"
+    }
+  ],
+  "utf8": [
+    {
+      "label": "ASCII",
+      "text": "hello",
+      "bytesHex": "68656c6c6f"
+    },
+    {
+      "label": "ภาษาไทย",
+      "text": "รหัสผ่าน",
+      "bytesHex": "e0b8a3e0b8abe0b8b1e0b8aae0b89ce0b988e0b8b2e0b899"
+    },
+    {
+      "label": "อีโมจิ",
+      "text": "🔐",
+      "bytesHex": "f09f9490"
+    }
+  ],
+  "mustReject": {
+    "hex": [
+      "abc",
+      "zz",
+      "0g"
+    ],
+    "base32": [
+      "UUUU",
+      "A",
+      "ABC",
+      "ABCDEF",
+      "01",
+      "AB-CD"
+    ],
+    "base64url": [
+      "QQ==",
+      "a+b/",
+      "A",
+      "QR"
+    ]
+  }
+}

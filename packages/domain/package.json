@@ -1,0 +1,25 @@
+{
+  "name": "@kunjae/domain",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Pure business logic: what lives inside the ciphertext, and the rules that govern it.",
+  "license": "MIT",
+
+  "sideEffects": false,
+
+  "exports": {
+    ".": "./src/index.ts"
+  },
+
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf .turbo node_modules *.tsbuildinfo"
+  },
+
+  "dependencies": {
+    "@kunjae/contracts": "workspace:*",
+    "@kunjae/core-crypto": "workspace:*",
+    "zod": "4.6.5"
+  }
+}

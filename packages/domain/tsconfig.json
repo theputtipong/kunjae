@@ -1,0 +1,14 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "noEmit": true,
+
+    /* เหตุผลเดียวกับ @kunjae/contracts: เรา import ซอร์สของ core-crypto โดยตรง
+       ซึ่งอ้างถึงชนิดของ WebCrypto — ESLint ทำหน้าที่แบน global ของแพลตฟอร์มแทน */
+    "lib": ["ES2022", "DOM"],
+    "types": [],
+    "allowImportingTsExtensions": true
+  },
+  "include": ["src/**/*.ts"]
+}

@@ -1,0 +1,87 @@
+#!/bin/sh
+set -eu
+
+RED='\033[0;31m'
+YELLOW='\033[0;33m'
+GREEN='\033[0;32m'
+DIM='\033[0;90m'
+NC='\033[0m'
+
+fail() {
+  printf "${RED}✖ pre-commit: %s${NC}\n" "$1" >&2
+  shift
+  for line in "$@"; do printf "  %s\n" "$line" >&2; done
+  printf "${DIM}  (ถ้ามั่นใจว่าปลอดภัยจริง ข้ามได้ด้วย git commit --no-verify)${NC}\n" >&2
+  exit 1
+}
+
+STAGED=$(git diff --cached --name-only --diff-filter=ACM)
+[ -z "$STAGED" ] && exit 0
+
+BLOCKED=$(printf '%s\n' "$STAGED" | grep -Ei \
+  '(^|/)\.env($|\.)|(^|/)\.dev\.vars$|\.(pem|key|keystore|jks|p12|pfx|ppk)$|(^|/)id_(rsa|dsa|ecdsa|ed25519)$' \
+  | grep -v '\.env\.example$' || true)
+
+if [ -n "$BLOCKED" ]; then
+  fail "พบไฟล์ที่ห้าม commit" $BLOCKED \
+    "ไฟล์เหล่านี้มักมีกุญแจหรือ credential เป็นเนื้อหาหลัก"
+fi
+
+SECRET_PATTERNS='-----BEGIN [A-Z ]*PRIVATE KEY-----'
+SECRET_PATTERNS="$SECRET_PATTERNS|AKIA[0-9A-Z]{16}"
+SECRET_PATTERNS="$SECRET_PATTERNS|gh[pousr]_[A-Za-z0-9]{36}"
+SECRET_PATTERNS="$SECRET_PATTERNS|xox[baprs]-[0-9A-Za-z-]{10,}"
+SECRET_PATTERNS="$SECRET_PATTERNS|AIza[0-9A-Za-z_-]{35}"
+SECRET_PATTERNS="$SECRET_PATTERNS|sk_live_[0-9a-zA-Z]{20,}"
+
+KUNJAE_KEY='K1-[0-9A-HJKMNP-TV-Z]{6}(-[0-9A-HJKMNP-TV-Z]{5}){4}'
+
+FOUND=""
+printf '%s\n' "$STAGED" | while IFS= read -r file; do
+  case "$file" in
+    .githooks/*|packages/crypto-spec/vectors/*) continue ;;
+  esac
+
+  content=$(git show ":$file" 2>/dev/null || true)
+  [ -z "$content" ] && continue
+
+  hit=$(printf '%s' "$content" | grep -nE -- "$SECRET_PATTERNS" | head -3 || true)
+  if [ -n "$hit" ]; then
+    printf "${RED}✖ pre-commit: พบรูปแบบของ credential ใน %s${NC}\n" "$file" >&2
+    printf '%s\n' "$hit" | sed 's/^/    /' >&2
+    exit 1
+  fi
+
+  hit=$(printf '%s' "$content" | grep -nE -- "$KUNJAE_KEY" | head -3 || true)
+  if [ -n "$hit" ]; then
+    printf "${RED}✖ pre-commit: พบ Secret Key ของ Kunjae ใน %s${NC}\n" "$file" >&2
+    printf '%s\n' "$hit" | sed 's/^/    /' >&2
+    printf "  ถ้าเป็นค่าตัวอย่างในเอกสาร ให้แก้ตัวอักษรบางตัวให้ผิดรูปแบบก่อน\n" >&2
+    exit 1
+  fi
+done || fail "สแกนเจอความลับในเนื้อหาที่กำลังจะ commit" \
+  "ลบค่าจริงออก แล้วใช้ค่าที่สร้างจาก generateSecretKey() ในเวลารันแทน"
+
+MAX_BYTES=1048576
+printf '%s\n' "$STAGED" | while IFS= read -r file; do
+  [ -f "$file" ] || continue
+  size=$(wc -c < "$file" | tr -d ' ')
+  if [ "$size" -gt "$MAX_BYTES" ]; then
+    printf "${RED}✖ pre-commit: ไฟล์ใหญ่เกิน 1 MB — %s (%s ไบต์)${NC}\n" "$file" "$size" >&2
+    exit 1
+  fi
+done || fail "พบไฟล์ขนาดใหญ่ผิดปกติ" \
+  "ตรวจว่าไม่ใช่ dump หรือ snapshot ที่อาจมีข้อมูลในหน่วยความจำติดมา"
+
+if printf '%s\n' "$STAGED" | grep -qE '\.(ts|tsx|js|mjs)$'; then
+  printf "${DIM}  pre-commit: ตรวจ type...${NC}\n"
+  pnpm --silent typecheck >/dev/null 2>&1 || fail "typecheck ไม่ผ่าน" \
+    "รัน pnpm typecheck เพื่อดูรายละเอียด"
+
+  printf "${DIM}  pre-commit: ตรวจ lint...${NC}\n"
+  pnpm --silent lint >/dev/null 2>&1 || fail "lint ไม่ผ่าน" \
+    "รัน pnpm lint เพื่อดูรายละเอียด หรือ pnpm lint:fix เพื่อแก้อัตโนมัติ"
+fi
+
+printf "${GREEN}✔ pre-commit: ผ่านทุกด่าน${NC}\n"
+exit 0

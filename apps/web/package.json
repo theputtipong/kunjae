@@ -1,0 +1,33 @@
+{
+  "name": "@kunjae/web",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Kunjae web app — ทุกการเข้ารหัสเกิดขึ้นในเบราว์เซอร์ของผู้ใช้เท่านั้น",
+  "license": "MIT",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf .turbo dist node_modules *.tsbuildinfo"
+  },
+  "dependencies": {
+    "@kunjae/client-core": "workspace:*",
+    "@kunjae/contracts": "workspace:*",
+    "@kunjae/core-crypto": "workspace:*",
+    "@kunjae/domain": "workspace:*",
+    "@tanstack/react-router": "1.170.38",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "4.3.3",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.1.1",
+    "tailwindcss": "4.3.3",
+    "vite": "8.3.0"
+  }
+}

@@ -1,0 +1,58 @@
+{
+  "description": "ข้อความ AAD และรูปแบบข้อมูลที่ทุกแพลตฟอร์มต้องสร้างได้เหมือนกัน",
+  "itemAad": [
+    {
+      "itemId": "01J8ZQK9P0Z8YXWVTSRQNMKJHG",
+      "version": 1,
+      "aad": "kunjae.v1.item|01J8ZQK9P0Z8YXWVTSRQNMKJHG|1",
+      "aadHex": "6b756e6a61652e76312e6974656d7c30314a385a514b3950305a3859585756545352514e4d4b4a48477c31"
+    },
+    {
+      "itemId": "01J8ZQK9P0Z8YXWVTSRQNMKJHG",
+      "version": 2,
+      "aad": "kunjae.v1.item|01J8ZQK9P0Z8YXWVTSRQNMKJHG|2",
+      "aadHex": "6b756e6a61652e76312e6974656d7c30314a385a514b3950305a3859585756545352514e4d4b4a48477c32"
+    },
+    {
+      "itemId": "01J8ZQK9P0Z8YXWVTSRQNMKJHG",
+      "version": 42,
+      "aad": "kunjae.v1.item|01J8ZQK9P0Z8YXWVTSRQNMKJHG|42",
+      "aadHex": "6b756e6a61652e76312e6974656d7c30314a385a514b3950305a3859585756545352514e4d4b4a48477c3432"
+    }
+  ],
+  "vaultMetaAad": [
+    {
+      "vaultId": "5X5YZEPTWYXCCKFJQB0Q0H8338",
+      "version": 1,
+      "aad": "kunjae.v1.vault-meta|5X5YZEPTWYXCCKFJQB0Q0H8338|1",
+      "aadHex": "6b756e6a61652e76312e7661756c742d6d6574617c355835595a45505457595843434b464a514230513048383333387c31"
+    },
+    {
+      "vaultId": "5X5YZEPTWYXCCKFJQB0Q0H8338",
+      "version": 7,
+      "aad": "kunjae.v1.vault-meta|5X5YZEPTWYXCCKFJQB0Q0H8338|7",
+      "aadHex": "6b756e6a61652e76312e7661756c742d6d6574617c355835595a45505457595843434b464a514230513048383333387c37"
+    }
+  ],
+  "itemContentExample": {
+    "note": "ชื่อฟิลด์ต้องตรงกันทุกตัวอักษร ฝั่ง Kotlin ต้อง serialize ได้เหมือนกัน",
+    "value": {
+      "type": "login",
+      "title": "ธนาคารกรุงเทพ",
+      "notes": "",
+      "tags": [
+        "การเงิน"
+      ],
+      "favorite": false,
+      "customFields": [],
+      "createdAt": "2026-09-20T10:00:00+07:00",
+      "updatedAt": "2026-09-20T10:00:00+07:00",
+      "username": "pdouvch",
+      "password": "S3cr3t!Pass",
+      "urls": [
+        "bualuang.co.th"
+      ],
+      "totpSecret": ""
+    }
+  }
+}

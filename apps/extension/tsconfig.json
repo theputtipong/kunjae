@@ -1,0 +1,24 @@
+{
+  "extends": "./.wxt/tsconfig.json",
+  "compilerOptions": {
+    /* ── กฎความปลอดภัยของชนิดข้อมูลที่โปรเจกต์นี้บังคับ ──────────────
+     * WXT สร้าง tsconfig ของตัวเองให้ เราจึงต่อยอดจากของมันแล้วเปิด
+     * ตัวเลือกเข้มทั้งหมดของ tsconfig.base.json ทับลงไปอีกชั้น
+     * (extends ซ้อนสองชั้นพร้อมกันไม่ได้ จึงต้องเขียนซ้ำตรงนี้)
+     */
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "noImplicitOverride": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "noPropertyAccessFromIndexSignature": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "allowUnreachableCode": false,
+    "verbatimModuleSyntax": true,
+    "jsx": "react-jsx",
+    "allowImportingTsExtensions": true,
+    "noEmit": true
+  }
+}
