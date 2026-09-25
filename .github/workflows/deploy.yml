@@ -76,7 +76,7 @@ jobs:
           echo "API ตอบกลับปกติ"
 
   web:
-    name: Pages (หน้าเว็บ)
+    name: หน้าเว็บ
     needs: verify
     if: inputs.target == 'web' || inputs.target == 'both'
     runs-on: ubuntu-latest
@@ -93,6 +93,8 @@ jobs:
       - name: build หน้าเว็บ
         env:
           VITE_API_BASE_URL: ${{ vars.API_BASE_URL }}
+          VITE_PLAY_STORE_URL: ${{ vars.PLAY_STORE_URL }}
+          VITE_CHROME_WEB_STORE_URL: ${{ vars.CHROME_WEB_STORE_URL }}
         run: |
           set -euo pipefail
           test -n "${VITE_API_BASE_URL}" || { echo "::error::ยังไม่ได้ตั้งตัวแปร API_BASE_URL"; exit 1; }
@@ -113,8 +115,24 @@ jobs:
           }
           echo "CSP อนุญาต ${API_BASE_URL} แล้ว"
 
-      - name: deploy Pages
+      - name: deploy หน้าเว็บ (Workers Static Assets)
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: pnpm --filter @kunjae/api exec wrangler pages deploy ../web/dist --project-name kunjae
+          WEB_ORIGIN: ${{ vars.WEB_ORIGIN }}
+        run: bash scripts/ci/deploy-web.sh
+
+      - name: ตรวจโดเมนจริงหลัง deploy
+        env:
+          WEB_ORIGIN: ${{ vars.WEB_ORIGIN }}
+        run: |
+          set -euo pipefail
+          test -n "${WEB_ORIGIN}" || { echo "::error::ยังไม่ได้ตั้งตัวแปร WEB_ORIGIN"; exit 1; }
+          for i in $(seq 1 30); do
+            curl -fsS "${WEB_ORIGIN}/" | grep -q '<div id="root">' && break
+            sleep 10
+          done
+          curl -fsSI "${WEB_ORIGIN}/" | grep -qi "content-security-policy"
+          curl -fsS "${WEB_ORIGIN}/.well-known/assetlinks.json" | jq -e '.[0].target.package_name == "com.kunjae.app"' > /dev/null
+          curl -fsS "${WEB_ORIGIN}/site.webmanifest" | jq -e '.related_applications[0].id == "com.kunjae.app"' > /dev/null
+          echo "${WEB_ORIGIN} ใช้งานได้"

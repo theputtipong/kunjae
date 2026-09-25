@@ -25,6 +25,12 @@ class OtpFillActivity : Activity() {
 
         setResult(RESULT_CANCELED)
 
+        if (IntegrityGuard.compromised(this)) {
+            SessionHolder.lock()
+            finish()
+            return
+        }
+
         val itemId = intent.getStringExtra(EXTRA_ITEM_ID)
         val fieldId: AutofillId? = intent.getParcelableExtra(EXTRA_FIELD_ID, AutofillId::class.java)
 

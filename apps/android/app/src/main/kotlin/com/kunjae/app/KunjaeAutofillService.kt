@@ -50,6 +50,12 @@ class KunjaeAutofillService : AutofillService() {
         cancellationSignal: CancellationSignal,
         callback: FillCallback,
     ) {
+        if (IntegrityGuard.compromised(this)) {
+            SessionHolder.lock()
+            callback.onSuccess(null)
+            return
+        }
+
         val structure = request.fillContexts.lastOrNull()?.structure
         if (structure == null) {
             callback.onSuccess(null)

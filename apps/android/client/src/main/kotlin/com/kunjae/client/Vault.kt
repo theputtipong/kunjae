@@ -18,7 +18,9 @@ import org.json.JSONObject
 private const val VAULT_KEY_BYTES = 32
 private const val FIRST_VERSION = 1
 
-data class CustomField(val name: String, val value: String, val hidden: Boolean)
+data class CustomField(val name: String, val value: String, val hidden: Boolean) {
+    override fun toString(): String = "CustomField(***)"
+}
 
 sealed interface VaultItem {
     val title: String
@@ -46,6 +48,7 @@ data class LoginItem(
     override val createdAt: String,
     override val updatedAt: String,
 ) : VaultItem {
+    override fun toString(): String = "LoginItem(***)"
     override val typeName: String get() = "login"
 }
 
@@ -58,6 +61,7 @@ data class SecureNoteItem(
     override val createdAt: String,
     override val updatedAt: String,
 ) : VaultItem {
+    override fun toString(): String = "SecureNoteItem(***)"
     override val typeName: String get() = "secure-note"
 }
 
@@ -75,6 +79,7 @@ data class CardItem(
     override val createdAt: String,
     override val updatedAt: String,
 ) : VaultItem {
+    override fun toString(): String = "CardItem(***)"
     override val typeName: String get() = "card"
 }
 

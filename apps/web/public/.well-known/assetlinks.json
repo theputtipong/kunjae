@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls", "delegate_permission/common.get_login_creds"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.kunjae.app",
+      "sha256_cert_fingerprints": [
+        "87:8D:E9:CB:27:D7:93:E5:E5:87:C0:71:93:82:81:98:A9:33:1B:EF:6C:E6:B8:7A:DE:DD:CB:6E:1F:A7:4A:C9"
+      ]
+    }
+  }
+]

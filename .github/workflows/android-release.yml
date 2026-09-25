@@ -1,0 +1,145 @@
+name: Android — release
+
+on:
+  workflow_dispatch:
+    inputs:
+      notes:
+        description: "บันทึกที่จะแสดงให้ผู้ทดสอบเห็น"
+        required: false
+        default: "build ทดสอบจากสาขาหลัก"
+  push:
+    tags: ["android-v*"]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: android-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: build · ลงนาม · ส่งออก
+    runs-on: ubuntu-latest
+    environment: android-release
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@v5
+
+      - name: เลขเวอร์ชัน
+        id: version
+        run: bash scripts/ci/version-from-tag.sh android-v
+
+      - name: คลายกุญแจลงนาม
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          set -euo pipefail
+          test -n "${KEYSTORE_BASE64}" || { echo "::error::ยังไม่ได้ตั้ง secret ANDROID_KEYSTORE_BASE64"; exit 1; }
+          printf '%s' "${KEYSTORE_BASE64}" | base64 -d > "${RUNNER_TEMP}/kunjae-release.jks"
+          keytool -list -keystore "${RUNNER_TEMP}/kunjae-release.jks" -storepass:env KEYSTORE_PASSWORD > /dev/null
+
+      - name: build APK + AAB
+        working-directory: apps/android
+        env:
+          KUNJAE_KEYSTORE_PATH: ${{ runner.temp }}/kunjae-release.jks
+          KUNJAE_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KUNJAE_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KUNJAE_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          KUNJAE_RELEASE_API_BASE_URL: ${{ vars.API_BASE_URL }}
+          KUNJAE_WEB_ORIGIN: ${{ vars.WEB_ORIGIN }}
+          KUNJAE_PLAY_SIGNING_CERT_SHA256: ${{ vars.PLAY_SIGNING_CERT_SHA256 }}
+          KUNJAE_VERSION_CODE: ${{ steps.version.outputs.code }}
+          KUNJAE_VERSION_NAME: ${{ steps.version.outputs.name }}
+        run: |
+          set -euo pipefail
+          test -n "${KUNJAE_RELEASE_API_BASE_URL}" || { echo "::error::ยังไม่ได้ตั้งตัวแปร API_BASE_URL"; exit 1; }
+          ./gradlew :app:assembleRelease :app:bundleRelease --no-daemon
+
+      - name: ยืนยันลายเซ็น
+        id: files
+        run: |
+          set -euo pipefail
+          APK=apps/android/app/build/outputs/apk/release/app-release.apk
+          AAB=apps/android/app/build/outputs/bundle/release/app-release.aab
+          test -f "$APK" && test -f "$AAB" || { echo "::error::ไม่พบ APK/AAB ที่ลงนามแล้ว"; exit 1; }
+          "$(ls "${ANDROID_HOME}"/build-tools/*/apksigner | tail -1)" verify "$APK"
+          jarsigner -verify "$AAB" | grep -q "jar verified"
+          BASE="kunjae-${{ steps.version.outputs.name }}-${GITHUB_SHA::7}"
+          cp "$APK" "${RUNNER_TEMP}/${BASE}.apk"
+          cp "$AAB" "${RUNNER_TEMP}/${BASE}.aab"
+          echo "apk=${RUNNER_TEMP}/${BASE}.apk" >> "$GITHUB_OUTPUT"
+          echo "aab=${RUNNER_TEMP}/${BASE}.aab" >> "$GITHUB_OUTPUT"
+          echo "base=${BASE}" >> "$GITHUB_OUTPUT"
+
+      - name: ช่องทางที่ตั้งค่าไว้
+        id: channels
+        env:
+          FIREBASE_APP_ID: ${{ secrets.FIREBASE_ANDROID_APP_ID }}
+          PLAY_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+        run: |
+          echo "firebase=$([ -n "${FIREBASE_APP_ID}" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          echo "play=$([ -n "${PLAY_JSON}" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+
+      - name: mapping ของ R8 (90 วัน)
+        uses: actions/upload-artifact@v4
+        with:
+          name: mapping-${{ steps.files.outputs.base }}
+          path: apps/android/app/build/outputs/mapping/release/mapping.txt
+          retention-days: 90
+
+      - name: GitHub Release
+        if: startsWith(github.ref, 'refs/tags/android-v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" "${{ steps.files.outputs.apk }}" "${{ steps.files.outputs.aab }}" \
+            --title "Android ${{ steps.version.outputs.name }}" --generate-notes
+
+      - name: artifact (7 วัน)
+        if: "!startsWith(github.ref, 'refs/tags/android-v')"
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.files.outputs.base }}
+          path: |
+            ${{ steps.files.outputs.apk }}
+            ${{ steps.files.outputs.aab }}
+          retention-days: 7
+
+      - name: Google Play
+        if: startsWith(github.ref, 'refs/tags/android-v') && steps.channels.outputs.play == 'true'
+        env:
+          PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          PLAY_PACKAGE_NAME: com.kunjae.app
+          PLAY_TRACK: ${{ vars.PLAY_TRACK }}
+          PLAY_RELEASE_STATUS: ${{ vars.PLAY_RELEASE_STATUS }}
+          AAB_PATH: ${{ steps.files.outputs.aab }}
+          RELEASE_NOTES: Kunjae ${{ steps.version.outputs.name }}
+        run: bash scripts/ci/play-upload.sh
+
+      - name: Firebase App Distribution
+        if: steps.channels.outputs.firebase == 'true'
+        env:
+          FIREBASE_SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
+          FIREBASE_APP_ID: ${{ secrets.FIREBASE_ANDROID_APP_ID }}
+          RELEASE_NOTES: ${{ github.event.inputs.notes || github.ref_name }}
+          APK: ${{ steps.files.outputs.apk }}
+        run: |
+          set -euo pipefail
+          export GOOGLE_APPLICATION_CREDENTIALS="${RUNNER_TEMP}/firebase-service-account.json"
+          printf '%s' "${FIREBASE_SA}" > "${GOOGLE_APPLICATION_CREDENTIALS}"
+          npm install -g firebase-tools@14.24.0
+          firebase appdistribution:distribute "${APK}" --app "${FIREBASE_APP_ID}" --groups testers \
+            --release-notes "${RELEASE_NOTES} · commit ${GITHUB_SHA}"
+
+      - name: ลบกุญแจและบัญชีบริการ
+        if: always()
+        run: rm -f "${RUNNER_TEMP}/kunjae-release.jks" "${RUNNER_TEMP}/firebase-service-account.json"

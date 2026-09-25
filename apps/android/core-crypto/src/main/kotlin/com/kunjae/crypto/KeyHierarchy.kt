@@ -9,6 +9,7 @@ private const val KEY_BYTES = 32
 private const val MIN_ACCOUNT_SALT_BYTES = 16
 
 data class AccountKeys(val authKey: ByteArray, val wrappingKey: ByteArray) {
+    override fun toString(): String = "AccountKeys(***)"
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is AccountKeys) return false

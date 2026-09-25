@@ -54,7 +54,9 @@ class VaultViewModel : ViewModel() {
 
     data class PlainField(val label: String, val value: String)
 
-    data class RevealedItem(val label: String, val value: String, val extra: String?)
+    data class RevealedItem(val label: String, val value: String, val extra: String?) {
+        override fun toString(): String = "RevealedItem(***)"
+    }
 
     private val session: Session? get() = SessionHolder.active()
 

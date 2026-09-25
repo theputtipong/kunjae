@@ -1,11 +1,10 @@
 {
   "name": "@kunjae/extension",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "private": true,
   "type": "module",
   "description": "ส่วนขยายเบราว์เซอร์ของ Kunjae — กุญแจอยู่ใน service worker ไม่ใช่ในหน้าเว็บ",
   "license": "MIT",
-
   "scripts": {
     "dev": "wxt",
     "build": "wxt build",
@@ -14,7 +13,6 @@
     "typecheck": "wxt prepare && tsc --noEmit",
     "clean": "rm -rf .turbo .wxt .output node_modules *.tsbuildinfo"
   },
-
   "dependencies": {
     "@kunjae/client-core": "workspace:*",
     "@kunjae/contracts": "workspace:*",
@@ -24,7 +22,6 @@
     "react-dom": "19.3.0",
     "zod": "4.6.5"
   },
-
   "devDependencies": {
     "@tailwindcss/vite": "4.3.3",
     "@types/react": "19.3.0",

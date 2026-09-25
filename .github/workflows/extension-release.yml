@@ -1,0 +1,94 @@
+name: Extension — release
+
+on:
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: "ส่งตรวจเพื่อเผยแพร่บน Chrome Web Store ทันที"
+        required: true
+        type: boolean
+        default: false
+  push:
+    tags: ["extension-v*"]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: extension-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: build · zip · ส่งออก
+    runs-on: ubuntu-latest
+    environment: extension-release
+
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: package.json
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      - name: เลขเวอร์ชัน
+        id: version
+        run: bash scripts/ci/version-from-tag.sh extension-v
+
+      - name: build + zip
+        working-directory: apps/extension
+        env:
+          WXT_API_BASE_URL: ${{ vars.API_BASE_URL }}
+          VERSION: ${{ steps.version.outputs.name }}
+        run: |
+          set -euo pipefail
+          case "${WXT_API_BASE_URL}" in
+            https://*) ;;
+            *) echo "::error::ยังไม่ได้ตั้งตัวแปร API_BASE_URL (https)"; exit 1 ;;
+          esac
+          npm pkg set version="${VERSION}"
+          pnpm zip
+          pnpm zip -b firefox
+          ls -1 .output/*.zip
+
+      - name: ไฟล์ที่ได้
+        id: files
+        run: |
+          echo "chrome=$(ls apps/extension/.output/*-chrome.zip)" >> "$GITHUB_OUTPUT"
+          echo "firefox=$(ls apps/extension/.output/*-firefox.zip)" >> "$GITHUB_OUTPUT"
+          echo "sources=$(ls apps/extension/.output/*-sources.zip 2>/dev/null || true)" >> "$GITHUB_OUTPUT"
+
+      - name: GitHub Release
+        if: startsWith(github.ref, 'refs/tags/extension-v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" "${{ steps.files.outputs.chrome }}" "${{ steps.files.outputs.firefox }}" \
+            --title "Extension ${{ steps.version.outputs.name }}" --generate-notes
+
+      - name: artifact (7 วัน)
+        if: "!startsWith(github.ref, 'refs/tags/extension-v')"
+        uses: actions/upload-artifact@v4
+        with:
+          name: kunjae-extension-${{ steps.version.outputs.name }}
+          path: apps/extension/.output/*.zip
+          retention-days: 7
+
+      - name: ตั้งค่า Chrome Web Store แล้วหรือยัง
+        id: cws
+        env:
+          CWS_EXTENSION_ID: ${{ secrets.CWS_EXTENSION_ID }}
+        run: echo "enabled=$([ -n "${CWS_EXTENSION_ID}" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+
+      - name: Chrome Web Store
+        if: steps.cws.outputs.enabled == 'true'
+        env:
+          CWS_EXTENSION_ID: ${{ secrets.CWS_EXTENSION_ID }}
+          CWS_CLIENT_ID: ${{ secrets.CWS_CLIENT_ID }}
+          CWS_CLIENT_SECRET: ${{ secrets.CWS_CLIENT_SECRET }}
+          CWS_REFRESH_TOKEN: ${{ secrets.CWS_REFRESH_TOKEN }}
+          CWS_PUBLISH: ${{ github.event.inputs.publish || 'true' }}
+          ZIP_PATH: ${{ steps.files.outputs.chrome }}
+        run: bash scripts/ci/cws-upload.sh

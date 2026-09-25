@@ -1,5 +1,15 @@
 package com.kunjae.app
 
+import com.kunjae.app.ui.KunjaeMark
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.Alignment
+import androidx.compose.material3.Text
+import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Arrangement
+import androidx.activity.viewModels
 import android.os.Bundle
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
@@ -25,8 +35,14 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         window.setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE)
+        window.decorView.filterTouchesWhenObscured = true
 
         enableEdgeToEdge()
+
+        if (IntegrityGuard.compromised(this)) {
+            shutDown()
+            return
+        }
 
         setContent {
             KunjaeTheme {
@@ -35,6 +51,48 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (IntegrityGuard.compromised(this)) shutDown()
+    }
+
+    private fun shutDown() {
+        val model: VaultViewModel by viewModels()
+        model.lock()
+        SessionHolder.lock()
+        setContent {
+            KunjaeTheme {
+                Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+                    TamperedScreen()
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun TamperedScreen() {
+    Column(
+        modifier = Modifier.fillMaxSize().safeDrawingPadding().padding(32.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        KunjaeMark(80.dp)
+        Text(
+            "Kunjae ปิดตัวเองเพื่อปกป้องข้อมูล",
+            style = MaterialTheme.typography.titleLarge,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(top = 24.dp),
+        )
+        Text(
+            "ตรวจพบว่าแอปถูกดัดแปลง ถูกดีบัก หรือมีเครื่องมือดักการทำงานอยู่ในเครื่อง ติดตั้ง Kunjae ใหม่จากแหล่งทางการแล้วลองอีกครั้ง",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(top = 8.dp),
+        )
     }
 }
 

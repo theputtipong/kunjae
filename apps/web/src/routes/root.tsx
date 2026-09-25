@@ -5,6 +5,7 @@ import { startAutoLock } from "@kunjae/client-core";
 import { lockSession } from "@kunjae/client-core";
 import { useSession } from "../session/use-session.ts";
 import { KunjaeMark } from "../ui/kunjae-mark.tsx";
+import { InstallPrompt } from "../ui/install-prompt.tsx";
 import { clearStore } from "@kunjae/client-core";
 
 export const RootLayout = () => {
@@ -56,6 +57,8 @@ export const RootLayout = () => {
       </header>
 
       <Outlet />
+
+      <InstallPrompt />
 
       <footer className="mx-auto max-w-5xl px-6 py-8 text-center text-xs text-stone-500">
         ข้อมูลของคุณถูกเข้ารหัสในเบราว์เซอร์นี้ก่อนออกจากเครื่องเสมอ

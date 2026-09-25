@@ -172,6 +172,10 @@ fun UnlockScreen(state: VaultViewModel.UiState, model: VaultViewModel, onHelp: (
             }
         }
 
+        if (!BuildConfig.DEBUG && IntegrityGuard.rooted()) {
+            MessageBanner("เครื่องนี้ถูก root — แอปที่ได้สิทธิ์ root อ่านข้อมูลที่ปลดล็อกแล้วในหน่วยความจำได้")
+        }
+
         MessageBanner(state.message, onDismiss = model::dismissMessage)
 
         val unlockButton: @Composable () -> Unit = {

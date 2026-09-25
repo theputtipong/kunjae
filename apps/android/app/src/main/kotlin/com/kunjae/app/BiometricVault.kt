@@ -29,6 +29,7 @@ object BiometricVault {
         val authKey: ByteArray,
         val wrappingKey: ByteArray,
     ) {
+        override fun toString(): String = "Remembered(***)"
         fun wipe() {
             com.kunjae.crypto.wipe(authKey)
             com.kunjae.crypto.wipe(wrappingKey)

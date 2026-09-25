@@ -43,3 +43,4 @@ CLAUDE.md
 *.tgz
 .kunjae-signing/
 *production-secrets*.json
+.wrangler.deploy.json

@@ -12,6 +12,7 @@ private const val TAG_BITS = 128
 private val secureRandom = SecureRandom()
 
 data class Sealed(val nonce: ByteArray, val ciphertext: ByteArray) {
+    override fun toString(): String = "Sealed(***)"
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is Sealed) return false

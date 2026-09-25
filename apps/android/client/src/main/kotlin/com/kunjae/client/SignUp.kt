@@ -16,7 +16,9 @@ import com.kunjae.crypto.utf8ToBytes
 import com.kunjae.crypto.wipe
 import java.time.Instant
 
-data class EmergencyKit(val email: String, val secretKey: String)
+data class EmergencyKit(val email: String, val secretKey: String) {
+    override fun toString(): String = "EmergencyKit(***)"
+}
 
 private const val MIN_PASSWORD_LENGTH = 12
 

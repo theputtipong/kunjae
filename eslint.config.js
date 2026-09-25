@@ -321,4 +321,11 @@ export default tseslint.config(
       "no-restricted-globals": "off",
     },
   },
+
+  {
+    files: ["apps/web/public/sw.js"],
+    languageOptions: {
+      globals: { ...globals.serviceworker },
+    },
+  },
 );

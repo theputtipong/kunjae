@@ -12,14 +12,18 @@ data class DecryptedItem(
     val vaultId: String,
     val version: Int,
     val item: VaultItem,
-)
+) {
+    override fun toString(): String = "DecryptedItem(***)"
+}
 
 data class VaultState(
     val vaults: Map<String, VaultMetadata>,
     val items: Map<String, DecryptedItem>,
     val brokenItemIds: Set<String>,
     val revision: Int,
-)
+) {
+    override fun toString(): String = "VaultState(***)"
+}
 
 private const val MAX_PULL_ROUNDS = 100
 
