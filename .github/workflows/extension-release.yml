@@ -56,9 +56,13 @@ jobs:
       - name: ไฟล์ที่ได้
         id: files
         run: |
-          echo "chrome=$(ls apps/extension/.output/*-chrome.zip)" >> "$GITHUB_OUTPUT"
-          echo "firefox=$(ls apps/extension/.output/*-firefox.zip)" >> "$GITHUB_OUTPUT"
-          echo "sources=$(ls apps/extension/.output/*-sources.zip 2>/dev/null || true)" >> "$GITHUB_OUTPUT"
+          set -euo pipefail
+          OUT="${RUNNER_TEMP}/extension"
+          mkdir -p "${OUT}"
+          cp apps/extension/.output/*.zip "${OUT}/"
+          echo "dir=${OUT}" >> "$GITHUB_OUTPUT"
+          echo "chrome=$(ls "${OUT}"/*-chrome.zip)" >> "$GITHUB_OUTPUT"
+          echo "firefox=$(ls "${OUT}"/*-firefox.zip)" >> "$GITHUB_OUTPUT"
 
       - name: GitHub Release
         if: startsWith(github.ref, 'refs/tags/extension-v')
@@ -73,7 +77,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: kunjae-extension-${{ steps.version.outputs.name }}
-          path: apps/extension/.output/*.zip
+          path: ${{ steps.files.outputs.dir }}/*.zip
+          if-no-files-found: error
           retention-days: 7
 
       - name: ตั้งค่า Chrome Web Store แล้วหรือยัง

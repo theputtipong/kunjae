@@ -94,6 +94,7 @@ jobs:
         with:
           name: mapping-${{ steps.files.outputs.base }}
           path: apps/android/app/build/outputs/mapping/release/mapping.txt
+          if-no-files-found: error
           retention-days: 90
 
       - name: GitHub Release
@@ -112,6 +113,7 @@ jobs:
           path: |
             ${{ steps.files.outputs.apk }}
             ${{ steps.files.outputs.aab }}
+          if-no-files-found: error
           retention-days: 7
 
       - name: Google Play
