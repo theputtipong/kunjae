@@ -1,5 +1,6 @@
 package com.kunjae.app
 
+import androidx.compose.ui.res.stringResource
 import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -63,7 +64,8 @@ fun ItemDetailScreen(
         SecureClipboard.copy(context, text, sensitive)
         Toast.makeText(
             context,
-            if (sensitive) "คัดลอกแล้ว — จะล้างเองใน ${SecureClipboard.CLEAR_AFTER_SECONDS} วินาที" else "คัดลอกแล้ว",
+            if (sensitive) context.getString(R.string.copied_sensitive, SecureClipboard.CLEAR_AFTER_SECONDS)
+            else context.getString(R.string.copied),
             Toast.LENGTH_SHORT,
         ).show()
     }
@@ -72,15 +74,15 @@ fun ItemDetailScreen(
         topBar = {
             TopAppBar(
                 title = { Text("") },
-                navigationIcon = { IconButton(onClick = onBack) { Icon(KIcons.Back, "กลับ") } },
+                navigationIcon = { IconButton(onClick = onBack) { Icon(KIcons.Back, stringResource(R.string.cd_back)) } },
                 actions = {
                     if (row.editable) {
                         IconButton(onClick = {
                             revealed = null
                             onEdit()
-                        }, enabled = !state.busy) { Icon(KIcons.Edit, "แก้ไข") }
+                        }, enabled = !state.busy) { Icon(KIcons.Edit, stringResource(R.string.cd_edit)) }
                     }
-                    IconButton(onClick = { confirmDelete = true }, enabled = !state.busy) { Icon(KIcons.Delete, "ลบ") }
+                    IconButton(onClick = { confirmDelete = true }, enabled = !state.busy) { Icon(KIcons.Delete, stringResource(R.string.cd_delete)) }
                 },
             )
         },
@@ -99,7 +101,7 @@ fun ItemDetailScreen(
                 LetterAvatar(row.title, size = 56.dp)
                 Column {
                     Text(row.title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
-                    val typeLabel = ITEM_TYPE_CHOICES.firstOrNull { it.first == row.typeName }?.second ?: row.typeName
+                    val typeLabel = ITEM_TYPE_CHOICES.firstOrNull { it.first == row.typeName }?.second?.let { stringResource(it) } ?: row.typeName
                     val vaultName = state.vaults.firstOrNull { it.vaultId == row.vaultId }?.name
                     Text(
                         listOfNotNull(typeLabel, vaultName).joinToString(" · "),
@@ -109,7 +111,7 @@ fun ItemDetailScreen(
                 }
             }
 
-            MessageBanner(state.message, onDismiss = model::dismissMessage)
+            MessageBanner(state.message.asString(), onDismiss = model::dismissMessage)
 
             val plain = model.plainFieldsOf(itemId)
             val hasSecret = row.typeName != "secure-note"
@@ -118,22 +120,27 @@ fun ItemDetailScreen(
                 SectionCard {
                     plain.forEachIndexed { i, field ->
                         if (i > 0) HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                        FieldRow(field.label, field.value, onCopy = { copy(field.value, false) })
+                        FieldRow(stringResource(field.labelRes), field.value, onCopy = { copy(field.value, false) })
                     }
                     if (hasSecret) {
                         if (plain.isNotEmpty()) HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                        val secretLabel = if (row.typeName == "card") "เลขบัตร" else "รหัสผ่าน"
+                        val secretLabel = if (row.typeName == "card") R.string.label_card_number else R.string.label_password
                         FieldRow(
-                            label = revealed?.label ?: secretLabel,
+                            label = stringResource(revealed?.labelRes ?: secretLabel),
                             value = revealed?.value ?: "",
                             monospace = true,
                             revealed = revealed != null,
                             onReveal = { revealed = if (revealed == null) model.revealSecret(itemId) else null },
                             onCopy = { model.revealSecret(itemId)?.value?.let { copy(it, true) } },
                         )
-                        revealed?.extra?.let {
+                        revealed?.takeIf { it.securityCode != null }?.let {
                             Text(
-                                it,
+                                stringResource(
+                                    R.string.card_expiry_cvc,
+                                    it.expiryMonth.orEmpty(),
+                                    it.expiryYear.orEmpty(),
+                                    it.securityCode.orEmpty(),
+                                ),
                                 style = MaterialTheme.typography.bodyMedium,
                                 modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 12.dp),
                             )
@@ -145,14 +152,14 @@ fun ItemDetailScreen(
             if (row.hasTotp) TotpCard(model, itemId, onCopy = { copy(it, true) })
 
             model.notesOf(itemId)?.let { notes ->
-                SectionCard(title = if (row.typeName == "secure-note") "เนื้อหา" else "โน้ต") {
+                SectionCard(title = stringResource(if (row.typeName == "secure-note") R.string.section_content else R.string.section_notes)) {
                     Text(notes, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(16.dp))
                 }
             }
 
             val destinations = state.vaults.filter { it.vaultId != row.vaultId }
             if (destinations.isNotEmpty()) {
-                SectionCard(title = "ย้ายไปยัง vault") {
+                SectionCard(title = stringResource(R.string.move_to_vault)) {
                     destinations.forEach { vault ->
                         SettingsRow(
                             icon = KIcons.Folder,
@@ -172,17 +179,23 @@ fun ItemDetailScreen(
     if (confirmDelete) {
         AlertDialog(
             onDismissRequest = { confirmDelete = false },
-            title = { Text("ลบ \"${row.title}\"?") },
-            text = { Text("รายการจะถูกลบจากทุกอุปกรณ์ และกู้คืนไม่ได้ นอกจากจากไฟล์สำรองที่ส่งออกไว้") },
+            title = { Text(stringResource(R.string.delete_title, row.title)) },
+            text = {
+                Text(
+                    stringResource(
+                        if (state.mode == VaultViewModel.Mode.LOCAL) R.string.delete_body_local else R.string.delete_body,
+                    ),
+                )
+            },
             confirmButton = {
                 TextButton(onClick = {
                     confirmDelete = false
                     revealed = null
                     model.removeItem(itemId)
                     onBack()
-                }) { Text("ลบ", color = MaterialTheme.colorScheme.error) }
+                }) { Text(stringResource(R.string.action_delete), color = MaterialTheme.colorScheme.error) }
             },
-            dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("ยกเลิก") } },
+            dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text(stringResource(R.string.action_cancel)) } },
         )
     }
 }
@@ -200,10 +213,10 @@ private fun TotpCard(model: VaultViewModel, itemId: String, onCopy: (String) -> 
 
     val code = model.totpOf(itemId, now)
 
-    SectionCard(title = "รหัสยืนยันสองขั้นตอน (TOTP)") {
+    SectionCard(title = stringResource(R.string.totp_title)) {
         if (code == null) {
             Text(
-                "ความลับ TOTP อ่านไม่ได้ — ตรวจสอบค่าที่บันทึกไว้",
+                stringResource(R.string.totp_unreadable),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.error,
                 modifier = Modifier.padding(16.dp),
@@ -223,8 +236,8 @@ private fun TotpCard(model: VaultViewModel, itemId: String, onCopy: (String) -> 
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.weight(1f),
             )
-            Text("${code.secondsRemaining} วิ", style = MaterialTheme.typography.labelLarge)
-            IconButton(onClick = { onCopy(code.code) }) { Icon(KIcons.Copy, "คัดลอกรหัส") }
+            Text(stringResource(R.string.totp_seconds, code.secondsRemaining), style = MaterialTheme.typography.labelLarge)
+            IconButton(onClick = { onCopy(code.code) }) { Icon(KIcons.Copy, stringResource(R.string.cd_copy_code)) }
         }
         LinearProgressIndicator(
             progress = { (code.secondsRemaining / 30f).coerceIn(0f, 1f) },

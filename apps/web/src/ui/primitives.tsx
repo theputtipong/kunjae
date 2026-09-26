@@ -17,8 +17,8 @@ export const Button = ({
 }: ButtonProps) => {
   const styles = {
     primary: "bg-brand-400 text-brand-950 hover:bg-brand-300 disabled:bg-stone-200 disabled:text-stone-500",
-    ghost: "bg-white text-stone-700 border border-stone-300 hover:bg-stone-50",
-    danger: "bg-white text-red-700 border border-red-300 hover:bg-red-50",
+    ghost: "bg-surface text-stone-700 border border-stone-300 hover:bg-stone-50",
+    danger: "bg-surface text-red-700 border border-red-300 hover:bg-red-50",
   } as const;
 
   return (
@@ -26,7 +26,7 @@ export const Button = ({
       type={type === "submit" ? "submit" : "button"}
       onClick={onClick}
       disabled={disabled}
-      className={`rounded-full px-5 py-2.5 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed ${styles[variant]}`}
+      className={`rounded-full px-5 py-2.5 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas disabled:cursor-not-allowed ${styles[variant]}`}
     >
       {children}
     </button>
@@ -81,7 +81,7 @@ export const Field = ({
         translate={sensitive ? "no" : undefined}
         autoCapitalize={sensitive ? "off" : undefined}
         autoCorrect={sensitive ? "off" : undefined}
-        className="w-full rounded-xl border border-stone-300 bg-white px-3.5 py-2.5 text-sm outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-400/40"
+        className="w-full rounded-xl border border-stone-300 bg-surface px-3.5 py-2.5 text-sm outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-400/40"
       />
       {hint !== undefined && (
         <span id={hintId} className="block text-xs text-stone-500">
@@ -109,5 +109,5 @@ export const Callout = ({ tone, children }: CalloutProps) => {
 };
 
 export const Card = ({ children }: { readonly children: ReactNode }) => (
-  <div className="rounded-3xl border border-stone-200 bg-white p-6 shadow-sm">{children}</div>
+  <div className="rounded-3xl border border-stone-200 bg-surface p-6 shadow-sm">{children}</div>
 );

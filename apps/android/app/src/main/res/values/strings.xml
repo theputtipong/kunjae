@@ -1,4 +1,291 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Kunjae</string>
+    <string name="app_name" translatable="false">Kunjae</string>
+    <string name="master_password" translatable="false">Master Password</string>
+    <string name="secret_key" translatable="false">Secret Key</string>
+    <string name="emergency_kit" translatable="false">Emergency Kit</string>
+
+    <string name="tamper_title">Kunjae shut itself down to protect your data</string>
+    <string name="tamper_body">This app appears to have been modified or debugged, or an instrumentation tool is running on this device. Reinstall Kunjae from an official source and try again.</string>
+
+    <string name="onboarding_hint_debug">This test build talks to the API on your Mac (%1$s). Run pnpm dev in apps/web, then open http://127.0.0.1:5173</string>
+    <string name="onboarding_hint_release">Open the Kunjae web app on a computer or in your phone\'s browser, then tap Sign up.</string>
+    <string name="welcome_zk_title">Zero-knowledge encryption</string>
+    <string name="welcome_zk_body">Your data is encrypted and decrypted on this device only. Not even the developers can read it.</string>
+    <string name="welcome_sync_title">Sync when you\'re ready</string>
+    <string name="welcome_sync_body">Sign in to use the same vault on web, Android and the browser extension.</string>
+    <string name="keys_title">Your keys</string>
+    <string name="keys_master_body">A password you choose and keep in your head. It isn\'t stored anywhere. Both ways of using Kunjae are protected by one.</string>
+    <string name="keys_secret_body">A 128-bit key generated for you at sign-up, shaped like K1-UUUUUU-UUUUU-… (U stands for a real character). It\'s in your Emergency Kit and is never sent to the server, so a stolen server copy plus a guessed password still isn\'t enough.</string>
+    <string name="before_title">Before you start</string>
+    <string name="before_no_reset_title">There\'s no \"Forgot password\" button</string>
+    <string name="before_no_reset_body">If you forget your Master Password, or lose the Secret Key for an account, your data is gone for good. Nobody can recover it for you.</string>
+    <string name="before_separate_title">Store them separately</string>
+    <string name="before_separate_body">Keep your Emergency Kit apart from your Master Password, and never store it inside Kunjae itself.</string>
+    <string name="before_slow_title">Unlocking takes a few seconds</string>
+    <string name="before_slow_body">It\'s slow on purpose, so guessing passwords costs more than it\'s worth.</string>
+    <string name="before_biometric_title">Use your fingerprint next time</string>
+    <string name="before_biometric_body">After unlocking, turn on \"Unlock with fingerprint\" in Settings.</string>
+    <string name="welcome_title">Welcome to Kunjae</string>
+    <string name="welcome_tagline">A safe for your passwords, secure notes and cards, where only you hold the key.</string>
+    <string name="onboarding_start">Get started</string>
+    <string name="onboarding_finish">Got it, let\'s start</string>
+    <string name="onboarding_next">Next</string>
+    <string name="onboarding_back">Back</string>
+    <string name="onboarding_skip">Skip</string>
+
+    <string name="cd_locked">Kunjae, locked</string>
+    <string name="cd_unlocked">Kunjae, unlocked</string>
+    <string name="unlock_title">Unlock your vault</string>
+    <string name="unlock_subtitle">All decryption happens on this device only.</string>
+    <string name="biometric_unlock_title">Unlock Kunjae</string>
+    <string name="biometric_unlock_subtitle">Confirm it\'s you to use the key stored on this device</string>
+    <string name="unlock_with_fingerprint">Unlock with fingerprint</string>
+    <string name="unlock_or_manual">Or enter your details below</string>
+    <string name="label_email">Email</string>
+    <string name="email_hint">The email you signed up with on the web</string>
+    <string name="master_password_hint">The password you chose when you signed up</string>
+    <string name="cd_show_password">Show password</string>
+    <string name="cd_hide_password">Hide password</string>
+    <string name="secret_key_hint">It\'s in the Emergency Kit you got at sign-up. Dashes and spaces don\'t matter.</string>
+    <string name="rooted_warning">This device is rooted. Apps with root access can read unlocked data from memory.</string>
+    <string name="unlock_deriving">Deriving your keys…</string>
+    <string name="unlock_action">Unlock</string>
+    <string name="unlock_argon_note">Argon2id is running. This slowness is what makes guessing passwords too expensive to be worth it.</string>
+    <string name="unlock_help">No account yet? / What\'s a Secret Key?</string>
+
+    <string name="type_login">Login</string>
+    <string name="type_secure_note">Secure note</string>
+    <string name="type_card">Card</string>
+    <string name="cd_sync">Sync</string>
+    <string name="cd_settings">Settings</string>
+    <string name="cd_lock">Lock</string>
+    <string name="cd_add_item">Add item</string>
+    <string name="search_placeholder">Search your vault</string>
+    <string name="cd_clear">Clear</string>
+    <string name="filter_all">All</string>
+    <string name="all_vaults">All vaults</string>
+    <string name="card_subtitle">Card •••• %1$s</string>
+    <string name="empty_filtered_title">No matching items</string>
+    <string name="empty_title">No items yet</string>
+    <string name="empty_filtered_body">Try a different search or filter</string>
+    <string name="empty_body">Tap + to add your first password, secure note or card</string>
+
+    <string name="copied">Copied</string>
+    <string name="copied_sensitive">Copied. It will be cleared in %1$d seconds</string>
+    <string name="cd_back">Back</string>
+    <string name="cd_edit">Edit</string>
+    <string name="cd_delete">Delete</string>
+    <string name="cd_copy">Copy</string>
+    <string name="cd_copy_code">Copy code</string>
+    <string name="cd_show">Show</string>
+    <string name="cd_hide">Hide</string>
+    <string name="cd_close">Close</string>
+    <string name="cd_cancel">Cancel</string>
+    <string name="label_username">Username</string>
+    <string name="label_website">Website</string>
+    <string name="label_password">Password</string>
+    <string name="label_card_number">Card number</string>
+    <string name="label_cardholder">Name on card</string>
+    <string name="card_expiry_cvc">Expires %1$s/%2$s · Security code %3$s</string>
+    <string name="section_content">Content</string>
+    <string name="section_notes">Notes</string>
+    <string name="move_to_vault">Move to vault</string>
+    <string name="delete_title">Delete \"%1$s\"?</string>
+    <string name="delete_body">This item will be deleted from all your devices and can\'t be recovered, except from a backup file you exported.</string>
+    <string name="action_delete">Delete</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="action_save">Save</string>
+    <string name="action_create">Create</string>
+    <string name="totp_title">Two-factor code (TOTP)</string>
+    <string name="totp_unreadable">Can\'t read the TOTP secret. Check the saved value.</string>
+    <string name="totp_seconds">%1$ds</string>
+
+    <string name="edit_new_title">New item</string>
+    <string name="edit_title">Edit item</string>
+    <string name="edit_target_vault">Saving to vault: %1$s. You can change it with the vault picker on the item list.</string>
+    <string name="label_item_title">Title</string>
+    <string name="cd_generate_password">Generate a password</string>
+    <string name="password_generate_hint">Tap the circular arrow to generate a strong password</string>
+    <string name="website_hint">Autofill matches the domain exactly, so enter the one used by the sign-in page</string>
+    <string name="label_totp_secret">TOTP secret (optional)</string>
+    <string name="totp_secret_hint">The 2FA setup key from the website, or an otpauth:// link</string>
+    <string name="label_month">Month</string>
+    <string name="label_year">Year</string>
+
+    <string name="settings_title">Security &amp; settings</string>
+    <string name="section_account">Account</string>
+    <string name="account_subtitle">Unlocked account</string>
+    <string name="section_security">Security</string>
+    <string name="change_master_password">Change Master Password</string>
+    <string name="change_master_password_subtitle">Requires your Secret Key · Your other devices will be signed out</string>
+    <string name="auto_lock">Auto-lock</string>
+    <string name="auto_lock_subtitle">After 15 minutes of inactivity, keys are wiped from memory</string>
+    <string name="lock_now">Lock now</string>
+    <string name="section_autofill">Autofill</string>
+    <string name="autofill_on">Enabled</string>
+    <string name="autofill_off">Set Kunjae as your autofill service</string>
+    <string name="autofill_on_subtitle">Fills passwords in supported apps and websites while Kunjae is unlocked</string>
+    <string name="autofill_off_subtitle">Opens system settings so you can choose Kunjae</string>
+    <string name="section_vaults">Vaults</string>
+    <plurals name="vault_item_count">
+        <item quantity="one">%d item</item>
+        <item quantity="other">%d items</item>
+    </plurals>
+    <string name="create_vault">Create a new vault</string>
+    <string name="section_web_only">Available on the web only</string>
+    <string name="emergency_kit_subtitle">View your Secret Key and print a copy</string>
+    <string name="export_import">Export / import backup</string>
+    <string name="export_import_subtitle">The file is encrypted with a new password you choose</string>
+    <string name="sign_out_everywhere">Sign out of all devices</string>
+    <string name="delete_account">Delete account permanently</string>
+    <string name="section_help">Help</string>
+    <string name="how_it_works">How Kunjae works</string>
+    <string name="how_it_works_subtitle">See the introduction again</string>
+    <string name="section_appearance">Appearance</string>
+    <string name="theme_title">Theme</string>
+    <string name="theme_system">System</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_dark">Dark</string>
+    <string name="language_title">Language</string>
+    <string name="language_system">System</string>
+    <string name="section_about">About</string>
+    <string name="about_version">Version %1$s</string>
+    <string name="support_title">Support Kunjae ☕</string>
+    <string name="support_subtitle">Buy me a coffee</string>
+    <string name="biometric_unavailable_subtitle">This device has no Strong fingerprint set up yet. Set one up in system settings first.</string>
+    <string name="biometric_enable_title">Turn on fingerprint unlock</string>
+    <string name="biometric_enable_subtitle">Confirm it\'s you to store the key in this device\'s secure chip</string>
+    <string name="biometric_on_subtitle">On. Your key is wrapped by this device\'s Android Keystore chip</string>
+    <string name="biometric_off_subtitle">Stores the derived keys in the secure chip · Never stores your Master Password or Secret Key</string>
+    <string name="vault_name">Vault name</string>
+    <string name="vault_name_placeholder">e.g. Work · Family</string>
+    <string name="change_password_warning">All your other devices will be signed out immediately, and the fingerprint unlock saved on this device will be removed.</string>
+    <string name="change_password_current">Current Master Password</string>
+    <string name="change_password_new">New Master Password</string>
+    <string name="change_password_too_short">Must be at least 12 characters</string>
+    <string name="change_password_new_hint">At least 12 characters. A long passphrase you can remember is stronger than a short, complex password.</string>
+    <string name="change_password_confirm">Re-enter new Master Password</string>
+    <string name="change_password_mismatch">The passwords don\'t match</string>
+    <string name="change_password_secret_hint">From your Emergency Kit. It\'s checked before your keys are re-wrapped; if it\'s wrong, nothing is changed.</string>
+    <string name="change_password_action">Change password</string>
+    <string name="change_password_result_note">The result will appear on the Settings screen</string>
+
+    <string name="msg_unlock_failed">Couldn\'t unlock. Check your email, password and Secret Key.</string>
+    <string name="msg_remembered_invalid">Your saved unlock no longer works. Please unlock with your Master Password.</string>
+    <string name="msg_resume_failed">Couldn\'t sign you back in. Try unlocking with your Master Password.</string>
+    <string name="msg_remember_ok">Saved. Next time you can unlock with your fingerprint.</string>
+    <string name="msg_remember_failed">Couldn\'t turn on fingerprint unlock</string>
+    <string name="msg_change_failed">Couldn\'t change the password. Check your current password and Secret Key (the new password must be at least 12 characters).</string>
+    <string name="msg_change_ok">Master Password changed. All your other devices were signed out, and you\'ll need to set up fingerprint unlock again on this device.</string>
+    <string name="msg_forgotten">Saved unlock removed</string>
+    <string name="msg_pull_failed">Couldn\'t sync</string>
+    <plurals name="msg_broken_items">
+        <item quantity="one">%d item couldn\'t be decrypted</item>
+        <item quantity="other">%d items couldn\'t be decrypted</item>
+    </plurals>
+    <string name="msg_id_failed">Couldn\'t create an item ID</string>
+    <string name="msg_save_failed">Couldn\'t save</string>
+    <string name="msg_create_vault_failed">Couldn\'t create the vault</string>
+    <string name="msg_type_change">You can\'t change the type of an existing item</string>
+    <string name="msg_update_conflict">Couldn\'t save. Another device may have changed this item. Try syncing again.</string>
+    <string name="msg_move_failed">Couldn\'t move. Another device may have changed this item.</string>
+    <string name="msg_delete_failed">Couldn\'t delete</string>
+
+    <string name="autofill_otp_label">%1$s · 2FA code</string>
+    <string name="autofill_save_unsupported">Kunjae doesn\'t support saving yet</string>
+    <string name="start_title">Keep your passwords safe</string>
+    <string name="start_subtitle">Choose how you want to use Kunjae. You can create an account later and move everything in.</string>
+    <string name="start_local">Start on this device</string>
+    <string name="start_local_body">No account needed. Your data stays on this phone only.</string>
+    <string name="start_sign_in">Sign in to your account</string>
+    <string name="start_sign_in_body">Sync across web, Android and the browser extension</string>
+    <string name="start_web_note">Creating an account is done on the web:</string>
+    <string name="start_web_note_plain">Creating an account is done in the Kunjae web app.</string>
+
+    <string name="local_create_title">Set a Master Password for this device</string>
+    <string name="local_create_subtitle">It unlocks the vault on this phone. There is no Secret Key and no account.</string>
+    <string name="local_password_label">Device Master Password</string>
+    <string name="local_password_confirm">Re-enter Master Password</string>
+    <string name="local_warn_forget">If you forget this password, your data can\'t be recovered. Nobody can reset it.</string>
+    <string name="local_warn_device">Data is stored only on this phone and is never backed up or sent anywhere. Uninstalling Kunjae or clearing its data erases it.</string>
+    <string name="local_warn_account">Want sync and a backup? Create an account on the web, sign in here, and move your items into it.</string>
+    <string name="local_ack">I understand that forgetting this password means losing my data</string>
+    <string name="local_create_action">Create vault on this device</string>
+    <string name="local_default_vault_name">Personal</string>
+
+    <string name="local_unlock_title">Unlock the vault on this device</string>
+    <string name="local_unlock_subtitle">Enter the Master Password you set for this phone.</string>
+    <string name="local_sign_in_instead">Sign in to your account instead</string>
+    <string name="local_back_to_device">Use the vault on this device</string>
+    <string name="local_forgot">Forgot the password?</string>
+
+    <string name="local_chip">On this device</string>
+    <string name="local_banner">Saved only on this device. Sign in to sync across web, Android and the browser extension.</string>
+    <string name="local_banner_action">Sign in to sync</string>
+
+    <string name="section_this_device">This device</string>
+    <string name="local_mode_title">No account</string>
+    <string name="local_mode_subtitle">Your vault is stored only on this phone</string>
+    <string name="local_change_password">Change device Master Password</string>
+    <string name="local_change_password_subtitle">Fingerprint unlock will need to be set up again</string>
+    <string name="local_delete">Delete the vault on this device</string>
+    <string name="local_delete_subtitle">Permanently erases every item stored on this phone</string>
+    <string name="local_sign_in_sync_subtitle">Locks this vault and opens the account sign-in. Your items can be moved into the account.</string>
+    <string name="local_delete_title">Delete the vault on this device?</string>
+    <string name="local_delete_body">Every item stored on this phone will be erased permanently. Nobody can recover it.</string>
+    <string name="local_delete_word">DELETE</string>
+    <string name="local_delete_type">Type %1$s to confirm</string>
+    <string name="local_change_warning">The fingerprint unlock saved for this vault will be removed. If you forget the new password, the data can\'t be recovered.</string>
+    <string name="delete_body_local">This item will be deleted from this device and can\'t be recovered.</string>
+
+    <string name="migrate_title">Move items into your account?</string>
+    <plurals name="migrate_question">
+        <item quantity="one">Move %d item from this device into your account?</item>
+        <item quantity="other">Move %d items from this device into your account?</item>
+    </plurals>
+    <string name="migrate_detail">They\'ll be encrypted with your account keys and synced. Once every item is moved, the copy on this device is deleted.</string>
+    <string name="migrate_action">Move items</string>
+    <string name="migrate_not_now">Not now</string>
+    <string name="migrate_password_title">Device Master Password</string>
+    <string name="migrate_password_body">Enter the password for the vault on this device, not your account password.</string>
+    <string name="migrate_row_title">Move items from this device</string>
+    <plurals name="migrate_row_subtitle">
+        <item quantity="one">%d item is stored only on this phone</item>
+        <item quantity="other">%d items are stored only on this phone</item>
+    </plurals>
+
+    <plurals name="msg_migrate_done">
+        <item quantity="one">Moved %d item into your account. The copy on this device was deleted.</item>
+        <item quantity="other">Moved %d items into your account. The copy on this device was deleted.</item>
+    </plurals>
+    <string name="msg_migrate_partial">Moved %1$d item(s). %2$d couldn\'t be moved and are still on this device.</string>
+    <string name="msg_migrate_wrong_password">Wrong device Master Password. Nothing was moved.</string>
+    <string name="msg_migrate_failed">Couldn\'t move the items. Nothing was deleted from this device.</string>
+    <string name="msg_local_create_failed">Couldn\'t create the vault on this device</string>
+    <string name="msg_local_unlock_failed">Wrong Master Password for this device</string>
+    <string name="msg_local_remembered_invalid">Your saved fingerprint unlock no longer works. Enter the device Master Password.</string>
+    <string name="msg_local_change_failed">Couldn\'t change the password. Check your current device Master Password (the new one must be at least 12 characters).</string>
+    <string name="msg_local_change_ok">Device Master Password changed. Set up fingerprint unlock again if you use it.</string>
+    <string name="msg_local_deleted">The vault on this device was deleted</string>
+
+    <string name="onboarding_local_title">Start without an account</string>
+    <string name="onboarding_local_body">Use Kunjae on this phone right away. No sign-up needed.</string>
+    <string name="keys_secret_title">Secret Key (accounts only)</string>
+    <string name="two_ways_title">Two ways to use Kunjae</string>
+    <string name="two_ways_local_heading">On this device</string>
+    <string name="two_ways_local_data_title">No account</string>
+    <string name="two_ways_local_data_body">Your data stays only on this phone, protected by a Master Password you set for this device.</string>
+    <string name="two_ways_local_recovery_title">Can\'t be recovered</string>
+    <string name="two_ways_local_recovery_body">If you forget the device Master Password or uninstall Kunjae, the vault can\'t be brought back.</string>
+    <string name="two_ways_local_separate_title">Separate from other devices</string>
+    <string name="two_ways_local_separate_body">The on-device vaults in the web app and the browser extension are separate vaults and don\'t share items with this one.</string>
+    <string name="two_ways_account_heading">With an account</string>
+    <string name="two_ways_account_sync_title">Sync everywhere</string>
+    <string name="two_ways_account_sync_body">Use the same vault on web, Android and the browser extension.</string>
+    <string name="two_ways_account_keys_title">Master Password + Secret Key</string>
+    <string name="two_ways_account_keys_body">You get your Secret Key in an Emergency Kit when you sign up. Download or print it and keep it safe.</string>
+    <string name="two_ways_account_web_title">Accounts are created on the web</string>
+    <string name="two_ways_account_web_origin">Sign up at %1$s, then sign in here with your email, Master Password and Secret Key.</string>
+    <string name="two_ways_move">You can start on this device and move everything into an account later. Kunjae offers to move your items when you sign in.</string>
 </resources>

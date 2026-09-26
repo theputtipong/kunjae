@@ -21,10 +21,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.kunjae.app.R
 
 @Composable
 fun LetterAvatar(title: String, size: Dp = 44.dp) {
@@ -122,12 +124,12 @@ fun FieldRow(
             IconButton(onClick = it) {
                 Icon(
                     if (revealed) KIcons.VisibilityOff else KIcons.Visibility,
-                    contentDescription = if (revealed) "ซ่อน" else "แสดง",
+                    contentDescription = stringResource(if (revealed) R.string.cd_hide else R.string.cd_show),
                 )
             }
         }
         onCopy?.let {
-            IconButton(onClick = it) { Icon(KIcons.Copy, contentDescription = "คัดลอก") }
+            IconButton(onClick = it) { Icon(KIcons.Copy, contentDescription = stringResource(R.string.cd_copy)) }
         }
     }
 }
@@ -148,7 +150,7 @@ fun MessageBanner(message: String?, onDismiss: (() -> Unit)? = null) {
             Icon(KIcons.Info, contentDescription = null, tint = MaterialTheme.colorScheme.onSecondaryContainer)
             Text(message, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSecondaryContainer, modifier = Modifier.weight(1f))
             if (onDismiss != null) {
-                Icon(KIcons.Close, contentDescription = "ปิด", tint = MaterialTheme.colorScheme.onSecondaryContainer, modifier = Modifier.size(18.dp))
+                Icon(KIcons.Close, contentDescription = stringResource(R.string.cd_close), tint = MaterialTheme.colorScheme.onSecondaryContainer, modifier = Modifier.size(18.dp))
             }
         }
     }

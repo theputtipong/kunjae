@@ -1,6 +1,8 @@
 package com.kunjae.app
 
+import androidx.compose.ui.res.stringResource
 import android.app.Activity
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -45,7 +47,7 @@ import com.kunjae.app.ui.kunjaeButtonColors
 import com.kunjae.app.ui.MessageBanner
 
 @Composable
-fun UnlockScreen(state: VaultViewModel.UiState, model: VaultViewModel, onHelp: () -> Unit) {
+fun UnlockScreen(state: VaultViewModel.UiState, model: VaultViewModel, onHelp: () -> Unit, onBack: (() -> Unit)? = null) {
     var email by remember { mutableStateOf("") }
     var masterPassword by remember { mutableStateOf("") }
     var secretKey by remember { mutableStateOf("") }
@@ -57,6 +59,8 @@ fun UnlockScreen(state: VaultViewModel.UiState, model: VaultViewModel, onHelp: (
 
     val canBiometric = state.remembered && activity != null && BiometricGate.isAvailable(activity)
 
+    if (onBack != null) BackHandler(enabled = !state.busy, onBack = onBack)
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -67,13 +71,13 @@ fun UnlockScreen(state: VaultViewModel.UiState, model: VaultViewModel, onHelp: (
     ) {
         Spacer(Modifier.height(8.dp))
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            KunjaeMark(40.dp, description = "Kunjae — ล็อกอยู่")
+            KunjaeMark(40.dp, description = stringResource(R.string.cd_locked))
             Text("Kunjae", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.SemiBold)
         }
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text("ปลดล็อกคลังข้อมูลของคุณ", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+            Text(stringResource(R.string.unlock_title), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
             Text(
-                "ทุกการถอดรหัสเกิดขึ้นในเครื่องนี้เท่านั้น",
+                stringResource(R.string.unlock_subtitle),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -90,8 +94,8 @@ fun UnlockScreen(state: VaultViewModel.UiState, model: VaultViewModel, onHelp: (
                     BiometricGate.authenticate(
                         activity,
                         cipher,
-                        title = "ปลดล็อก Kunjae",
-                        subtitle = "ยืนยันตัวตนเพื่อใช้กุญแจที่เก็บไว้ในเครื่องนี้",
+                        title = activity.getString(R.string.biometric_unlock_title),
+                        subtitle = activity.getString(R.string.biometric_unlock_subtitle),
                     ) { outcome ->
                         when (outcome) {
                             is BiometricGate.Outcome.Approved -> model.resumeFromBiometric(activity, outcome.cipher)
@@ -105,10 +109,10 @@ fun UnlockScreen(state: VaultViewModel.UiState, model: VaultViewModel, onHelp: (
             ) {
                 Icon(KIcons.Shield, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.size(8.dp))
-                Text("ปลดล็อกด้วยลายนิ้วมือ")
+                Text(stringResource(R.string.unlock_with_fingerprint))
             }
             Text(
-                "หรือกรอกด้วยตัวเองด้านล่าง",
+                stringResource(R.string.unlock_or_manual),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.align(Alignment.CenterHorizontally),
@@ -118,8 +122,8 @@ fun UnlockScreen(state: VaultViewModel.UiState, model: VaultViewModel, onHelp: (
         OutlinedTextField(
             value = email,
             onValueChange = { email = it },
-            label = { Text("อีเมล") },
-            supportingText = { Text("อีเมลที่ใช้สมัครบนเว็บ") },
+            label = { Text(stringResource(R.string.label_email)) },
+            supportingText = { Text(stringResource(R.string.email_hint)) },
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
             modifier = Modifier.fillMaxWidth(),
@@ -133,14 +137,14 @@ fun UnlockScreen(state: VaultViewModel.UiState, model: VaultViewModel, onHelp: (
             Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     KunjaeMark(18.dp, tile = false, color = MaterialTheme.colorScheme.primary)
-                    Text("กุญแจสองชิ้นของคุณ", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                    Text(stringResource(R.string.keys_title), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                 }
 
                 OutlinedTextField(
                     value = masterPassword,
                     onValueChange = { masterPassword = it },
-                    label = { Text("Master Password") },
-                    supportingText = { Text("รหัสผ่านที่คุณตั้งเองตอนสมัคร") },
+                    label = { Text(stringResource(R.string.master_password)) },
+                    supportingText = { Text(stringResource(R.string.master_password_hint)) },
                     singleLine = true,
                     visualTransformation = if (showPassword) VisualTransformation.None else PasswordVisualTransformation(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
@@ -148,7 +152,7 @@ fun UnlockScreen(state: VaultViewModel.UiState, model: VaultViewModel, onHelp: (
                         IconButton(onClick = { showPassword = !showPassword }) {
                             Icon(
                                 if (showPassword) KIcons.VisibilityOff else KIcons.Visibility,
-                                contentDescription = if (showPassword) "ซ่อนรหัสผ่าน" else "แสดงรหัสผ่าน",
+                                contentDescription = stringResource(if (showPassword) R.string.cd_hide_password else R.string.cd_show_password),
                             )
                         }
                     },
@@ -158,9 +162,9 @@ fun UnlockScreen(state: VaultViewModel.UiState, model: VaultViewModel, onHelp: (
                 OutlinedTextField(
                     value = secretKey,
                     onValueChange = { secretKey = it },
-                    label = { Text("Secret Key") },
+                    label = { Text(stringResource(R.string.secret_key)) },
                     placeholder = { Text("K1-UUUUUU-UUUUU-UUUUU-UUUUU-UUUUU") },
-                    supportingText = { Text("อยู่ใน Emergency Kit ที่ได้ตอนสมัคร — ขีดและช่องว่างไม่สำคัญ") },
+                    supportingText = { Text(stringResource(R.string.secret_key_hint)) },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(
                         keyboardType = KeyboardType.Password,
@@ -173,20 +177,20 @@ fun UnlockScreen(state: VaultViewModel.UiState, model: VaultViewModel, onHelp: (
         }
 
         if (!BuildConfig.DEBUG && IntegrityGuard.rooted()) {
-            MessageBanner("เครื่องนี้ถูก root — แอปที่ได้สิทธิ์ root อ่านข้อมูลที่ปลดล็อกแล้วในหน่วยความจำได้")
+            MessageBanner(stringResource(R.string.rooted_warning))
         }
 
-        MessageBanner(state.message, onDismiss = model::dismissMessage)
+        MessageBanner(state.message.asString(), onDismiss = model::dismissMessage)
 
         val unlockButton: @Composable () -> Unit = {
             if (state.busy) {
                 CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
                 Spacer(Modifier.size(12.dp))
-                Text("กำลังคำนวณกุญแจ…")
+                Text(stringResource(R.string.unlock_deriving))
             } else {
                 Icon(KIcons.Lock, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.size(8.dp))
-                Text("ปลดล็อก")
+                Text(stringResource(R.string.unlock_action))
             }
         }
         val onUnlock = {
@@ -205,14 +209,20 @@ fun UnlockScreen(state: VaultViewModel.UiState, model: VaultViewModel, onHelp: (
 
         if (state.busy) {
             Text(
-                "Argon2id กำลังทำงาน — ความช้านี้คือสิ่งที่ทำให้การเดารหัสผ่านแพงเกินคุ้ม",
+                stringResource(R.string.unlock_argon_note),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
 
         TextButton(onClick = onHelp, modifier = Modifier.align(Alignment.CenterHorizontally)) {
-            Text("ยังไม่มีบัญชี? / Secret Key คืออะไร?")
+            Text(stringResource(R.string.unlock_help))
+        }
+
+        if (onBack != null) {
+            TextButton(onClick = onBack, enabled = !state.busy, modifier = Modifier.align(Alignment.CenterHorizontally)) {
+                Text(stringResource(if (state.localExists) R.string.local_back_to_device else R.string.onboarding_back))
+            }
         }
     }
 }

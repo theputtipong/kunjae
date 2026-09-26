@@ -10,7 +10,13 @@ import {
 } from "@kunjae/domain";
 
 import { apiSyncPull, apiSyncPush } from "../api/client.ts";
-import { addUnlockedVault, withVaultKey, withWrappingKey } from "../session/vault-session.ts";
+import {
+  addUnlockedVault,
+  isLocalSession,
+  withVaultKey,
+  withWrappingKey,
+} from "../session/vault-session.ts";
+import { applyLocalChange, reloadLocalVault } from "../local/local-store.ts";
 import {
   getItemContent,
   getItemRef,
@@ -73,6 +79,8 @@ export const pull = async (nowMs: number): Promise<AppResult<void>> => {
   setSyncing(true);
 
   try {
+    if (isLocalSession()) return await reloadLocalVault();
+
     for (let round = 0; round < MAX_PULL_ROUNDS; round += 1) {
       const token = await ensureToken(nowMs);
       if (!token.ok) return token;
@@ -101,6 +109,8 @@ export const pull = async (nowMs: number): Promise<AppResult<void>> => {
 };
 
 const pushChange = async (change: ItemChange, nowMs: number): Promise<AppResult<void>> => {
+  if (isLocalSession()) return applyLocalChange(change);
+
   const token = await ensureToken(nowMs);
   if (!token.ok) return token;
 

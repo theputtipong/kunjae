@@ -1,6 +1,7 @@
 package com.kunjae.app
 
 import android.content.Context
+import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -17,6 +18,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -30,6 +32,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -50,80 +53,80 @@ object OnboardingPrefs {
     }
 }
 
-private data class Point(val icon: ImageVector, val title: String, val body: String)
+private data class Point(val icon: ImageVector, @StringRes val title: Int, @StringRes val body: Int, val bodyArgs: List<Any> = emptyList())
 
-private data class Page(val icon: ImageVector, val title: String, val points: List<Point>)
+private data class Section(val icon: ImageVector?, @StringRes val heading: Int?, val points: List<Point>)
 
-private fun signUpHint(): String =
-    if (BuildConfig.DEBUG) {
-        "build ทดสอบนี้ต่อกับ API บน Mac (${BuildConfig.API_BASE_URL}) — " +
-            "รัน pnpm dev ใน apps/web แล้วเปิด http://127.0.0.1:5173"
-    } else {
-        "เปิดเว็บแอป Kunjae บนคอมพิวเตอร์หรือเบราว์เซอร์ของมือถือ แล้วกดสมัคร"
-    }
+private data class Page(val icon: ImageVector, @StringRes val title: Int, val sections: List<Section>, @StringRes val footer: Int? = null)
+
+private fun webSignUp(): Point = when {
+    BuildConfig.WEB_ORIGIN.isNotEmpty() ->
+        Point(KIcons.Person, R.string.two_ways_account_web_title, R.string.two_ways_account_web_origin, listOf(BuildConfig.WEB_ORIGIN))
+    BuildConfig.DEBUG ->
+        Point(KIcons.Person, R.string.two_ways_account_web_title, R.string.onboarding_hint_debug, listOf(BuildConfig.API_BASE_URL))
+    else -> Point(KIcons.Person, R.string.two_ways_account_web_title, R.string.onboarding_hint_release)
+}
 
 private val welcome = listOf(
-    Point(
-        KIcons.Lock,
-        "เข้ารหัสแบบ Zero-Knowledge",
-        "ข้อมูลถูกเข้ารหัสและถอดรหัสในเครื่องนี้เท่านั้น — แม้แต่ผู้พัฒนาก็เปิดดูไม่ได้",
-    ),
-    Point(
-        KIcons.Key,
-        "กุญแจสองชั้น",
-        "Master Password ที่คุณจำ + Secret Key ที่ระบบสุ่มให้ ต้องมีครบทั้งคู่จึงจะเปิดได้",
-    ),
-    Point(
-        KIcons.Sync,
-        "ซิงค์เฉพาะข้อมูลที่อ่านไม่ออก",
-        "server เก็บและส่งต่อได้แค่ ciphertext ระหว่างเว็บกับมือถือของคุณ",
-    ),
+    Point(KIcons.Lock, R.string.welcome_zk_title, R.string.welcome_zk_body),
+    Point(KIcons.Shield, R.string.onboarding_local_title, R.string.onboarding_local_body),
+    Point(KIcons.Sync, R.string.welcome_sync_title, R.string.welcome_sync_body),
 )
 
 private fun pages(): List<Page> = listOf(
     Page(
-        KIcons.Key,
-        "กุญแจสองชิ้นของคุณ",
+        KIcons.Folder,
+        R.string.two_ways_title,
         listOf(
-            Point(KIcons.Person, "Master Password", "รหัสผ่านที่คุณตั้งเองตอนสมัคร และจำไว้ในหัว — ไม่มีที่ไหนเก็บไว้ให้"),
-            Point(
-                KIcons.Key,
-                "Secret Key",
-                "รหัสยาว 128 บิตที่ระบบสุ่มให้ตอนสมัคร หน้าตาแบบ K1-UUUUUU-UUUUU-… (U แทนตัวอักษรจริง) " +
-                    "ไม่ต้องจำ แต่ต้องเก็บไว้",
-            ),
-            Point(
+            Section(
                 KIcons.Shield,
-                "ทำไมต้องสองชิ้น",
-                "ถ้ามีคนขโมยข้อมูลจาก server แล้วเดารหัสผ่านถูก ก็ยังเปิดไม่ได้ เพราะ Secret Key ไม่เคยถูกส่งขึ้น server",
+                R.string.two_ways_local_heading,
+                listOf(
+                    Point(KIcons.Lock, R.string.two_ways_local_data_title, R.string.two_ways_local_data_body),
+                    Point(KIcons.Info, R.string.two_ways_local_recovery_title, R.string.two_ways_local_recovery_body),
+                    Point(KIcons.Folder, R.string.two_ways_local_separate_title, R.string.two_ways_local_separate_body),
+                ),
+            ),
+            Section(
+                KIcons.Sync,
+                R.string.two_ways_account_heading,
+                listOf(
+                    Point(KIcons.Sync, R.string.two_ways_account_sync_title, R.string.two_ways_account_sync_body),
+                    Point(KIcons.Key, R.string.two_ways_account_keys_title, R.string.two_ways_account_keys_body),
+                    webSignUp(),
+                ),
             ),
         ),
+        footer = R.string.two_ways_move,
     ),
     Page(
-        KIcons.Note,
-        "ไปเอามาจากไหน",
+        KIcons.Key,
+        R.string.keys_title,
         listOf(
-            Point(KIcons.Person, "ยังไม่มีบัญชี → สมัครบนเว็บก่อน", signUpHint()),
-            Point(
-                KIcons.Note,
-                "เก็บ Emergency Kit",
-                "หลังสมัคร เว็บจะแสดง Emergency Kit ครั้งเดียว ในนั้นมีอีเมลและ Secret Key — ดาวน์โหลดหรือพิมพ์เก็บไว้",
+            Section(
+                null,
+                null,
+                listOf(
+                    Point(KIcons.Person, R.string.master_password, R.string.keys_master_body),
+                    Point(KIcons.Key, R.string.keys_secret_title, R.string.keys_secret_body),
+                ),
             ),
-            Point(KIcons.Lock, "มีบัญชีแล้ว", "เปิด Emergency Kit แล้วกรอก อีเมล · Master Password · Secret Key ในหน้าปลดล็อก"),
         ),
     ),
     Page(
         KIcons.Info,
-        "ก่อนเริ่ม",
+        R.string.before_title,
         listOf(
-            Point(
-                KIcons.Info,
-                "ไม่มีปุ่ม \"ลืมรหัสผ่าน\"",
-                "ลืม Master Password หรือทำ Secret Key หาย = ข้อมูลหายถาวร ไม่มีใครกู้ให้ได้",
+            Section(
+                null,
+                null,
+                listOf(
+                    Point(KIcons.Info, R.string.before_no_reset_title, R.string.before_no_reset_body),
+                    Point(KIcons.Folder, R.string.before_separate_title, R.string.before_separate_body),
+                    Point(KIcons.Refresh, R.string.before_slow_title, R.string.before_slow_body),
+                    Point(KIcons.Shield, R.string.before_biometric_title, R.string.before_biometric_body),
+                ),
             ),
-            Point(KIcons.Folder, "เก็บแยกกัน", "เก็บ Emergency Kit แยกจาก Master Password และอย่าเก็บไว้ใน Kunjae เอง"),
-            Point(KIcons.Refresh, "ปลดล็อกใช้เวลาหลายวินาที", "ตั้งใจให้ช้า เพื่อให้การเดารหัสผ่านแพงเกินคุ้ม"),
-            Point(KIcons.Shield, "ครั้งต่อไปใช้ลายนิ้วมือได้", "ปลดล็อกแล้วเปิด \"ปลดล็อกด้วยลายนิ้วมือ\" ในหน้าตั้งค่า"),
         ),
     ),
 )
@@ -147,16 +150,16 @@ fun OnboardingScreen(onDone: () -> Unit) {
         ) {
             if (index == 0) {
                 Spacer(Modifier.height(24.dp))
-                KunjaeMark(112.dp, modifier = Modifier.align(Alignment.CenterHorizontally), description = "Kunjae")
+                KunjaeMark(112.dp, modifier = Modifier.align(Alignment.CenterHorizontally), description = stringResource(R.string.app_name))
                 Text(
-                    "ยินดีต้อนรับสู่ Kunjae",
+                    stringResource(R.string.welcome_title),
                     style = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.SemiBold,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth(),
                 )
                 Text(
-                    "ตู้เซฟเก็บรหัสผ่าน โน้ตลับ และบัตร ที่มีแต่คุณถือกุญแจ",
+                    stringResource(R.string.welcome_tagline),
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
@@ -167,17 +170,43 @@ fun OnboardingScreen(onDone: () -> Unit) {
                 val page = details[index - 1]
                 Spacer(Modifier.height(8.dp))
                 IconBadge(page.icon, size = 64.dp)
-                Text(page.title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
-                Surface(
-                    shape = MaterialTheme.shapes.large,
-                    color = MaterialTheme.colorScheme.surfaceContainer,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                Text(stringResource(page.title), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
+                page.sections.forEach { section ->
+                    Surface(
+                        shape = MaterialTheme.shapes.large,
+                        color = MaterialTheme.colorScheme.surfaceContainer,
+                        modifier = Modifier.fillMaxWidth(),
                     ) {
-                        page.points.forEach { PointRow(it) }
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(16.dp),
+                        ) {
+                            if (section.heading != null) {
+                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    if (section.icon != null) {
+                                        Icon(section.icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                                    }
+                                    Text(stringResource(section.heading), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                                }
+                            }
+                            section.points.forEach { PointRow(it) }
+                        }
+                    }
+                }
+                page.footer?.let { footer ->
+                    Surface(
+                        shape = MaterialTheme.shapes.large,
+                        color = MaterialTheme.colorScheme.primaryContainer,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Icon(KIcons.Refresh, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.size(20.dp))
+                            Text(stringResource(footer), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                        }
                     }
                 }
             }
@@ -191,11 +220,13 @@ fun OnboardingScreen(onDone: () -> Unit) {
             modifier = Modifier.fillMaxWidth().height(52.dp),
         ) {
             Text(
-                when {
-                    index == 0 -> "เริ่มต้นใช้งาน"
-                    last -> "เข้าใจแล้ว — ไปหน้าปลดล็อก"
-                    else -> "ถัดไป"
-                },
+                stringResource(
+                    when {
+                        index == 0 -> R.string.onboarding_start
+                        last -> R.string.onboarding_finish
+                        else -> R.string.onboarding_next
+                    },
+                ),
             )
         }
 
@@ -203,8 +234,8 @@ fun OnboardingScreen(onDone: () -> Unit) {
             modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
-            if (index > 0) TextButton(onClick = { index -= 1 }) { Text("ย้อนกลับ") } else Spacer(Modifier)
-            if (!last) TextButton(onClick = onDone) { Text("ข้าม") }
+            if (index > 0) TextButton(onClick = { index -= 1 }) { Text(stringResource(R.string.onboarding_back)) } else Spacer(Modifier)
+            if (!last) TextButton(onClick = onDone) { Text(stringResource(R.string.onboarding_skip)) }
         }
     }
 }
@@ -214,8 +245,8 @@ private fun PointRow(point: Point) {
     Row(horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.Top) {
         IconBadge(point.icon)
         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(point.title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-            Text(point.body, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(stringResource(point.title), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+            Text(stringResource(point.body, *point.bodyArgs.toTypedArray()), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 
 import { clearDeferredInstall, getDeferredInstall, onInstallAvailabilityChange } from "../pwa.ts";
 import { KunjaeMark } from "./kunjae-mark.tsx";
+import { useT } from "../i18n/index.ts";
 
 const ANDROID_PACKAGE = "com.kunjae.app";
 const DISMISSED_KEY = "kunjae.install-prompt.dismissed-at";
@@ -83,30 +84,15 @@ const decide = async (): Promise<Kind | null> => {
   }
 };
 
-const COPY: Record<Kind, { readonly title: string; readonly body: string; readonly action: string | null }> = {
-  "android-store": {
-    title: "ใช้ Kunjae บนมือถือ",
-    body: "แอป Android ปลดล็อกด้วยลายนิ้วมือ และเติมรหัสผ่านให้แอปอื่นได้",
-    action: "ดาวน์โหลดจาก Google Play",
-  },
-  "android-pwa": {
-    title: "ติดตั้ง Kunjae",
-    body: "เพิ่มลงหน้าจอโฮม เปิดได้เหมือนแอป",
-    action: "ติดตั้ง",
-  },
-  "ios-pwa": {
-    title: "เพิ่ม Kunjae ลงหน้าจอโฮม",
-    body: "แตะปุ่มแชร์ ⎋ ใน Safari แล้วเลือก \"เพิ่มไปยังหน้าจอโฮม\" เพื่อเปิดแบบแอปได้ทุกครั้ง",
-    action: null,
-  },
-  "desktop-extension": {
-    title: "ติดตั้งส่วนขยาย Kunjae",
-    body: "เติมรหัสผ่านและรหัส 2FA ในหน้าเว็บได้โดยไม่ต้องคัดลอก",
-    action: "ไปที่ Chrome Web Store",
-  },
-};
+const COPY_KEY = {
+  "android-store": "androidStore",
+  "android-pwa": "androidPwa",
+  "ios-pwa": "iosPwa",
+  "desktop-extension": "desktopExtension",
+} as const satisfies Record<Kind, string>;
 
 export const InstallPrompt = () => {
+  const t = useT();
   const [kind, setKind] = useState<Kind | null>(null);
 
   useEffect(() => {
@@ -147,11 +133,11 @@ export const InstallPrompt = () => {
     dismiss();
   };
 
-  const copy = COPY[kind];
+  const copy = t.install[COPY_KEY[kind]];
 
   return (
-    <div role="dialog" aria-modal="true" aria-labelledby="install-title" className="fixed inset-0 z-50 flex items-end justify-center bg-stone-950/50 p-4 sm:items-center">
-      <div className="w-full max-w-sm space-y-4 rounded-3xl bg-white p-6 text-center shadow-xl">
+    <div role="dialog" aria-modal="true" aria-labelledby="install-title" className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-4 sm:items-center">
+      <div className="w-full max-w-sm space-y-4 rounded-3xl bg-surface p-6 text-center shadow-xl">
         <div className="flex justify-center">
           <KunjaeMark size={64} />
         </div>
@@ -171,7 +157,7 @@ export const InstallPrompt = () => {
           </button>
         )}
         <button type="button" onClick={dismiss} className="text-sm text-stone-500 underline">
-          {copy.action === null ? "เข้าใจแล้ว" : "ใช้ต่อในเบราว์เซอร์"}
+          {copy.action === null ? t.install.gotIt : t.install.keepUsingBrowser}
         </button>
       </div>
     </div>

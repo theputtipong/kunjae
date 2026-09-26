@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "ส่วนขยายเบราว์เซอร์ของ Kunjae — กุญแจอยู่ใน service worker ไม่ใช่ในหน้าเว็บ",
+  "description": "Kunjae browser extension — keys live in the service worker, not in web pages",
   "license": "MIT",
   "scripts": {
     "dev": "wxt",

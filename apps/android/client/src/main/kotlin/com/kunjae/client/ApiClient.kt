@@ -35,7 +35,7 @@ class ApiClient(baseUrl: String) {
 
         val isLoopback = uri.host == "127.0.0.1" || uri.host == "10.0.2.2"
         val safe = uri.scheme == "https" || (uri.scheme == "http" && isLoopback)
-        require(safe) { "ที่อยู่ API ต้องเป็น https (ยกเว้นที่อยู่ของเครื่องตัวเองตอนพัฒนา)" }
+        require(safe) { "The API address must use https (except for a local address during development)" }
 
         base = baseUrl.trimEnd('/')
     }

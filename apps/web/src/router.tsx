@@ -11,7 +11,12 @@ import { EmergencyKitPage } from "./routes/emergency-kit.tsx";
 import { SettingsPage } from "./routes/settings.tsx";
 import { SignUpPage } from "./routes/sign-up.tsx";
 import { UnlockPage } from "./routes/unlock.tsx";
+import { StartPage } from "./routes/start.tsx";
+import { CreateLocalPage } from "./routes/create-local.tsx";
 import { VaultPage } from "./routes/vault.tsx";
+import { WelcomePage } from "./routes/welcome.tsx";
+import { onboardingSeen } from "./session/onboarding.ts";
+import { getLocalPresence } from "./session/local-presence.ts";
 
 const rootRoute = createRootRoute({ component: RootLayout });
 
@@ -21,13 +26,40 @@ const requireUnlocked = (): void => {
   }
 };
 
-const unlockRoute = createRoute({
+const redirectIfUnlocked = (): void => {
+  if (getSessionView().status === "unlocked") throw redirect({ to: "/vault" });
+};
+
+const startRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/",
+  component: StartPage,
+  beforeLoad: () => {
+    redirectIfUnlocked();
+    if (!onboardingSeen() && getLocalPresence() !== "present") throw redirect({ to: "/welcome" });
+  },
+});
+
+const welcomeRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/welcome",
+  component: WelcomePage,
+});
+
+const unlockRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/sign-in",
   component: UnlockPage,
   beforeLoad: () => {
-    if (getSessionView().status === "unlocked") throw redirect({ to: "/vault" });
+    if (getSessionView().mode === "account") throw redirect({ to: "/vault" });
   },
+});
+
+const createLocalRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/start-local",
+  component: CreateLocalPage,
+  beforeLoad: redirectIfUnlocked,
 });
 
 const signUpRoute = createRoute({
@@ -57,7 +89,10 @@ const settingsRoute = createRoute({
 });
 
 export const routeTree = rootRoute.addChildren([
+  startRoute,
+  welcomeRoute,
   unlockRoute,
+  createLocalRoute,
   signUpRoute,
   emergencyKitRoute,
   vaultRoute,

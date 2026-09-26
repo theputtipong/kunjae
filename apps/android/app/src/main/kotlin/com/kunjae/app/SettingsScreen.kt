@@ -1,5 +1,10 @@
 package com.kunjae.app
 
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import android.app.Activity
 import android.content.Intent
 import android.net.Uri
@@ -52,10 +57,16 @@ fun SettingsScreen(
     model: VaultViewModel,
     onBack: () -> Unit,
     onChangePassword: () -> Unit,
+    onLocalChangePassword: () -> Unit,
+    onSignInToSync: () -> Unit,
     onShowIntro: () -> Unit,
+    themeMode: ThemeMode,
+    onThemeChange: (ThemeMode) -> Unit,
 ) {
     val activity = LocalContext.current as? Activity
     var creatingVault by remember { mutableStateOf(false) }
+    var deletingLocal by remember { mutableStateOf(false) }
+    val local = state.mode == VaultViewModel.Mode.LOCAL
 
     BackHandler(onBack = onBack)
 
@@ -71,8 +82,8 @@ fun SettingsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("ความปลอดภัยและการตั้งค่า") },
-                navigationIcon = { IconButton(onClick = onBack) { Icon(KIcons.Back, "กลับ") } },
+                title = { Text(stringResource(R.string.settings_title)) },
+                navigationIcon = { IconButton(onClick = onBack) { Icon(KIcons.Back, stringResource(R.string.cd_back)) } },
             )
         },
     ) { padding ->
@@ -84,32 +95,73 @@ fun SettingsScreen(
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
-            MessageBanner(state.message, onDismiss = model::dismissMessage)
+            MessageBanner(state.message.asString(), onDismiss = model::dismissMessage)
 
-            SectionCard(title = "บัญชี") {
-                SettingsRow(KIcons.Person, state.email, "บัญชีที่ปลดล็อกอยู่")
+            if (local) {
+                SectionCard(title = stringResource(R.string.section_this_device)) {
+                    SettingsRow(KIcons.Shield, stringResource(R.string.local_mode_title), stringResource(R.string.local_mode_subtitle))
+                    SettingsRow(
+                        KIcons.Key,
+                        stringResource(R.string.local_change_password),
+                        stringResource(R.string.local_change_password_subtitle),
+                        enabled = !state.busy,
+                        onClick = onLocalChangePassword,
+                        trailing = { Icon(KIcons.ChevronRight, contentDescription = null) },
+                    )
+                    SettingsRow(
+                        KIcons.Sync,
+                        stringResource(R.string.local_banner_action),
+                        stringResource(R.string.local_sign_in_sync_subtitle),
+                        enabled = !state.busy,
+                        onClick = onSignInToSync,
+                        trailing = { Icon(KIcons.ChevronRight, contentDescription = null) },
+                    )
+                    SettingsRow(
+                        KIcons.Delete,
+                        stringResource(R.string.local_delete),
+                        stringResource(R.string.local_delete_subtitle),
+                        enabled = !state.busy,
+                        onClick = { deletingLocal = true },
+                    )
+                }
+            } else {
+                SectionCard(title = stringResource(R.string.section_account)) {
+                    SettingsRow(KIcons.Person, state.email, stringResource(R.string.account_subtitle))
+                    if (state.localExists) {
+                        val count = remember(state.localExists, state.busy) { model.localItemCount() ?: 0 }
+                        SettingsRow(
+                            KIcons.Sync,
+                            stringResource(R.string.migrate_row_title),
+                            pluralStringResource(R.plurals.migrate_row_subtitle, count, count),
+                            enabled = !state.busy && count > 0,
+                            onClick = model::offerMigrationAgain,
+                            trailing = { Icon(KIcons.ChevronRight, contentDescription = null) },
+                        )
+                    }
+                }
             }
 
-            SectionCard(title = "ความปลอดภัย") {
+            SectionCard(title = stringResource(R.string.section_security)) {
                 activity?.let { BiometricRow(state, model, it) }
-                SettingsRow(
-                    KIcons.Key,
-                    "เปลี่ยน Master Password",
-                    "ต้องใช้ Secret Key · อุปกรณ์อื่นจะถูกออกจากระบบ",
-                    enabled = !state.busy,
-                    onClick = onChangePassword,
-                    trailing = { Icon(KIcons.ChevronRight, contentDescription = null) },
-                )
-                SettingsRow(KIcons.Lock, "ล็อกอัตโนมัติ", "เมื่อไม่ได้ใช้งาน 15 นาที — ล้างกุญแจออกจากหน่วยความจำ")
-                SettingsRow(KIcons.Lock, "ล็อกทันที", onClick = model::lock)
+                if (!local) {
+                    SettingsRow(
+                        KIcons.Key,
+                        stringResource(R.string.change_master_password),
+                        stringResource(R.string.change_master_password_subtitle),
+                        enabled = !state.busy,
+                        onClick = onChangePassword,
+                        trailing = { Icon(KIcons.ChevronRight, contentDescription = null) },
+                    )
+                }
+                SettingsRow(KIcons.Lock, stringResource(R.string.auto_lock), stringResource(R.string.auto_lock_subtitle))
+                SettingsRow(KIcons.Lock, stringResource(R.string.lock_now), onClick = model::lock)
             }
 
-            SectionCard(title = "ป้อนอัตโนมัติ (Autofill)") {
+            SectionCard(title = stringResource(R.string.section_autofill)) {
                 SettingsRow(
                     KIcons.Shield,
-                    if (autofillOn) "เปิดใช้อยู่" else "ตั้ง Kunjae เป็นบริการป้อนอัตโนมัติ",
-                    if (autofillOn) "เติมรหัสผ่านในแอปและหน้าเว็บที่รองรับ — ต้องปลดล็อก Kunjae ไว้"
-                    else "เปิดหน้าตั้งค่าของระบบให้เลือก Kunjae",
+                    stringResource(if (autofillOn) R.string.autofill_on else R.string.autofill_off),
+                    stringResource(if (autofillOn) R.string.autofill_on_subtitle else R.string.autofill_off_subtitle),
                     onClick = {
                         runCatching {
                             activity?.startActivity(
@@ -121,28 +173,104 @@ fun SettingsScreen(
                 )
             }
 
-            SectionCard(title = "Vault") {
+            SectionCard(title = stringResource(R.string.section_vaults)) {
                 state.vaults.forEach { vault ->
-                    SettingsRow(KIcons.Folder, vault.name, "${vault.itemCount} รายการ")
+                    SettingsRow(KIcons.Folder, vault.name, pluralStringResource(R.plurals.vault_item_count, vault.itemCount, vault.itemCount))
                 }
-                SettingsRow(KIcons.Add, "สร้าง vault ใหม่", enabled = !state.busy, onClick = { creatingVault = true })
+                SettingsRow(KIcons.Add, stringResource(R.string.create_vault), enabled = !state.busy, onClick = { creatingVault = true })
             }
 
-            SectionCard(title = "ทำได้บนเว็บเท่านั้น") {
-                SettingsRow(KIcons.Note, "Emergency Kit", "ดู Secret Key และพิมพ์เก็บ", enabled = false)
-                SettingsRow(KIcons.Folder, "ส่งออก / นำเข้าไฟล์สำรอง", "ไฟล์เข้ารหัสด้วยรหัสผ่านที่ตั้งใหม่", enabled = false)
-                SettingsRow(KIcons.Logout, "ออกจากระบบทุกอุปกรณ์", enabled = false)
-                SettingsRow(KIcons.Delete, "ลบบัญชีถาวร", enabled = false)
+            if (!local) {
+                SectionCard(title = stringResource(R.string.section_web_only)) {
+                    SettingsRow(KIcons.Note, stringResource(R.string.emergency_kit), stringResource(R.string.emergency_kit_subtitle), enabled = false)
+                    SettingsRow(KIcons.Folder, stringResource(R.string.export_import), stringResource(R.string.export_import_subtitle), enabled = false)
+                    SettingsRow(KIcons.Logout, stringResource(R.string.sign_out_everywhere), enabled = false)
+                    SettingsRow(KIcons.Delete, stringResource(R.string.delete_account), enabled = false)
+                }
             }
 
-            SectionCard(title = "ช่วยเหลือ") {
-                SettingsRow(KIcons.Info, "Kunjae ทำงานอย่างไร", "ดูหน้าแนะนำอีกครั้ง", onClick = onShowIntro)
-                SettingsRow(KIcons.Info, "เวอร์ชัน", "${BuildConfig.VERSION_NAME}${if (BuildConfig.DEBUG) " (debug)" else ""}")
+            SectionCard(title = stringResource(R.string.section_appearance)) {
+                ChoiceRow(
+                    title = stringResource(R.string.theme_title),
+                    options = listOf(
+                        ThemeMode.SYSTEM to stringResource(R.string.theme_system),
+                        ThemeMode.LIGHT to stringResource(R.string.theme_light),
+                        ThemeMode.DARK to stringResource(R.string.theme_dark),
+                    ),
+                    selected = themeMode,
+                    onSelect = onThemeChange,
+                )
+                activity?.let { LanguageRow(it) }
+            }
+
+            SectionCard(title = stringResource(R.string.section_help)) {
+                SettingsRow(KIcons.Info, stringResource(R.string.how_it_works), stringResource(R.string.how_it_works_subtitle), onClick = onShowIntro)
+            }
+
+            SectionCard(title = stringResource(R.string.section_about)) {
+                SettingsRow(
+                    KIcons.Info,
+                    stringResource(R.string.app_name),
+                    stringResource(R.string.about_version, BuildConfig.VERSION_NAME + if (BuildConfig.DEBUG) " (debug)" else ""),
+                )
+                SettingsRow(
+                    KIcons.Heart,
+                    stringResource(R.string.support_title),
+                    stringResource(R.string.support_subtitle),
+                    onClick = {
+                        runCatching {
+                            activity?.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(SUPPORT_URL)))
+                        }
+                    },
+                )
             }
         }
     }
 
     if (creatingVault) CreateVaultDialog(onDismiss = { creatingVault = false }, onCreate = model::createVaultNamed)
+
+    if (deletingLocal && activity != null) {
+        DeleteLocalDialog(
+            onDismiss = { deletingLocal = false },
+            onConfirm = {
+                deletingLocal = false
+                model.deleteLocal(activity)
+            },
+        )
+    }
+}
+
+private const val SUPPORT_URL = "https://buymeacoffee.com/theputtipong"
+
+@Composable
+private fun <T> ChoiceRow(title: String, options: List<Pair<T, String>>, selected: T, onSelect: (T) -> Unit) {
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text(title, style = MaterialTheme.typography.bodyLarge)
+        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+            options.forEachIndexed { i, (value, label) ->
+                SegmentedButton(
+                    selected = value == selected,
+                    onClick = { onSelect(value) },
+                    shape = SegmentedButtonDefaults.itemShape(i, options.size),
+                ) { Text(label, maxLines = 1) }
+            }
+        }
+    }
+}
+
+@Composable
+private fun LanguageRow(activity: Activity) {
+    val current = remember { AppLocale.selected(activity) }
+    ChoiceRow(
+        title = stringResource(R.string.language_title),
+        options = listOf("" to stringResource(R.string.language_system)) +
+            AppLocale.supported.map { it to AppLocale.displayName(it) },
+        selected = current,
+        onSelect = { AppLocale.select(activity, it) },
+    )
 }
 
 @Composable
@@ -150,23 +278,25 @@ private fun BiometricRow(state: VaultViewModel.UiState, model: VaultViewModel, a
     if (!BiometricGate.isAvailable(activity)) {
         SettingsRow(
             KIcons.Shield,
-            "ปลดล็อกด้วยลายนิ้วมือ",
-            "เครื่องนี้ยังไม่ได้ตั้งลายนิ้วมือระดับ Strong — ตั้งในการตั้งค่าของระบบก่อน",
+            stringResource(R.string.unlock_with_fingerprint),
+            stringResource(R.string.biometric_unavailable_subtitle),
             enabled = false,
         )
         return
     }
 
+    val on = if (state.mode == VaultViewModel.Mode.LOCAL) state.localRemembered else state.remembered
+
     val toggle: () -> Unit = {
-        if (state.remembered) {
+        if (on) {
             model.forgetSession(activity)
         } else {
-            BiometricVault.beginRemember(activity)?.let { cipher ->
+            model.beginRemember(activity)?.let { cipher ->
                 BiometricGate.authenticate(
                     activity,
                     cipher,
-                    title = "เปิดปลดล็อกด้วยลายนิ้วมือ",
-                    subtitle = "ยืนยันตัวตนเพื่อเก็บกุญแจไว้ในชิปของเครื่องนี้",
+                    title = activity.getString(R.string.biometric_enable_title),
+                    subtitle = activity.getString(R.string.biometric_enable_subtitle),
                 ) { outcome ->
                     when (outcome) {
                         is BiometricGate.Outcome.Approved -> model.rememberSession(activity, outcome.cipher)
@@ -179,12 +309,11 @@ private fun BiometricRow(state: VaultViewModel.UiState, model: VaultViewModel, a
 
     SettingsRow(
         KIcons.Shield,
-        "ปลดล็อกด้วยลายนิ้วมือ",
-        if (state.remembered) "เปิดอยู่ — กุญแจถูกห่อด้วยชิป Android Keystore ของเครื่องนี้"
-        else "เก็บกุญแจที่คำนวณแล้วไว้ในชิป · ไม่เก็บ Master Password หรือ Secret Key",
+        stringResource(R.string.unlock_with_fingerprint),
+        stringResource(if (on) R.string.biometric_on_subtitle else R.string.biometric_off_subtitle),
         enabled = !state.busy,
         onClick = toggle,
-        trailing = { Switch(checked = state.remembered, onCheckedChange = { toggle() }, enabled = !state.busy) },
+        trailing = { Switch(checked = on, onCheckedChange = { toggle() }, enabled = !state.busy) },
     )
 }
 
@@ -193,13 +322,13 @@ private fun CreateVaultDialog(onDismiss: () -> Unit, onCreate: (String) -> Unit)
     var name by remember { mutableStateOf("") }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("สร้าง vault ใหม่") },
+        title = { Text(stringResource(R.string.create_vault)) },
         text = {
             OutlinedTextField(
                 value = name,
                 onValueChange = { name = it },
-                label = { Text("ชื่อ vault") },
-                placeholder = { Text("เช่น งาน · ครอบครัว") },
+                label = { Text(stringResource(R.string.vault_name)) },
+                placeholder = { Text(stringResource(R.string.vault_name_placeholder)) },
                 singleLine = true,
             )
         },
@@ -207,9 +336,9 @@ private fun CreateVaultDialog(onDismiss: () -> Unit, onCreate: (String) -> Unit)
             TextButton(onClick = {
                 onCreate(name.trim())
                 onDismiss()
-            }, enabled = name.isNotBlank()) { Text("สร้าง") }
+            }, enabled = name.isNotBlank()) { Text(stringResource(R.string.action_create)) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("ยกเลิก") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } },
     )
 }
 
@@ -242,8 +371,8 @@ fun ChangePasswordScreen(state: VaultViewModel.UiState, model: VaultViewModel, o
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("เปลี่ยน Master Password") },
-                navigationIcon = { IconButton(onClick = cancel) { Icon(KIcons.Close, "ยกเลิก") } },
+                title = { Text(stringResource(R.string.change_master_password)) },
+                navigationIcon = { IconButton(onClick = cancel) { Icon(KIcons.Close, stringResource(R.string.cd_cancel)) } },
             )
         },
     ) { padding ->
@@ -257,12 +386,12 @@ fun ChangePasswordScreen(state: VaultViewModel.UiState, model: VaultViewModel, o
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             MessageBanner(
-                "อุปกรณ์อื่นทุกเครื่องจะถูกออกจากระบบทันที และลายนิ้วมือที่จำไว้ในเครื่องนี้จะถูกลบ",
+                stringResource(R.string.change_password_warning),
             )
             OutlinedTextField(
                 value = current,
                 onValueChange = { current = it },
-                label = { Text("Master Password เดิม") },
+                label = { Text(stringResource(R.string.change_password_current)) },
                 singleLine = true,
                 visualTransformation = PasswordVisualTransformation(),
                 modifier = Modifier.fillMaxWidth(),
@@ -270,8 +399,10 @@ fun ChangePasswordScreen(state: VaultViewModel.UiState, model: VaultViewModel, o
             OutlinedTextField(
                 value = next,
                 onValueChange = { next = it },
-                label = { Text("Master Password ใหม่") },
-                supportingText = { Text(if (tooShort) "ต้องยาวอย่างน้อย 12 ตัวอักษร" else "อย่างน้อย 12 ตัวอักษร — วลียาวที่จำได้แข็งแรงกว่ารหัสสั้นที่ซับซ้อน") },
+                label = { Text(stringResource(R.string.change_password_new)) },
+                supportingText = {
+                    Text(stringResource(if (tooShort) R.string.change_password_too_short else R.string.change_password_new_hint))
+                },
                 isError = tooShort,
                 singleLine = true,
                 visualTransformation = PasswordVisualTransformation(),
@@ -280,8 +411,8 @@ fun ChangePasswordScreen(state: VaultViewModel.UiState, model: VaultViewModel, o
             OutlinedTextField(
                 value = confirm,
                 onValueChange = { confirm = it },
-                label = { Text("พิมพ์ Master Password ใหม่อีกครั้ง") },
-                supportingText = { if (mismatch) Text("รหัสผ่านทั้งสองช่องไม่ตรงกัน") },
+                label = { Text(stringResource(R.string.change_password_confirm)) },
+                supportingText = { if (mismatch) Text(stringResource(R.string.change_password_mismatch)) },
                 isError = mismatch,
                 singleLine = true,
                 visualTransformation = PasswordVisualTransformation(),
@@ -290,8 +421,8 @@ fun ChangePasswordScreen(state: VaultViewModel.UiState, model: VaultViewModel, o
             OutlinedTextField(
                 value = secret,
                 onValueChange = { secret = it },
-                label = { Text("Secret Key") },
-                supportingText = { Text("จาก Emergency Kit — ใช้ยืนยันก่อนห่อกุญแจใหม่ ถ้าผิดระบบจะปฏิเสธโดยไม่แตะข้อมูล") },
+                label = { Text(stringResource(R.string.secret_key)) },
+                supportingText = { Text(stringResource(R.string.change_password_secret_hint)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -304,9 +435,9 @@ fun ChangePasswordScreen(state: VaultViewModel.UiState, model: VaultViewModel, o
                 enabled = ready,
                 colors = kunjaeButtonColors(),
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-            ) { Text("เปลี่ยนรหัสผ่าน") }
+            ) { Text(stringResource(R.string.change_password_action)) }
             Text(
-                "ผลลัพธ์จะแสดงที่หน้าตั้งค่า",
+                stringResource(R.string.change_password_result_note),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

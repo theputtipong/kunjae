@@ -17,11 +17,23 @@ const headersWithApiOrigin = (apiBaseUrl: string | undefined): Plugin => ({
   },
 });
 
+const appVersion = (): string => {
+  const manifest: unknown = JSON.parse(readFileSync(resolve(import.meta.dirname, "package.json"), "utf8"));
+  if (typeof manifest === "object" && manifest !== null && "version" in manifest && typeof manifest.version === "string") {
+    return manifest.version;
+  }
+  return "0.0.0";
+};
+
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, import.meta.dirname, "VITE_");
 
   return {
     plugins: [react(), tailwindcss(), headersWithApiOrigin(env["VITE_API_BASE_URL"])],
+
+    define: {
+      __APP_VERSION__: JSON.stringify(appVersion()),
+    },
 
     build: {
       target: "esnext",

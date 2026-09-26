@@ -3,7 +3,7 @@
   "name": "Kunjae",
   "short_name": "Kunjae",
   "description": "Zero-Knowledge Password Manager",
-  "lang": "th",
+  "lang": "en",
   "dir": "ltr",
   "start_url": "/",
   "scope": "/",

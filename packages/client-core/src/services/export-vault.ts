@@ -3,7 +3,7 @@ import { ItemContentSchema, type DecryptedItem, type ItemContent } from "@kunjae
 import { createUlid } from "../lib/ulid.ts";
 import { getAllItemsForExport as readAllItems } from "../store/vault-store.ts";
 import { saveItem } from "./sync.ts";
-import { invalidInput, type AppResult } from "./errors.ts";
+import { invalidInput, type AppResult, type MessageLang } from "./errors.ts";
 
 export const EXPORT_FORMAT_VERSION = 1;
 
@@ -12,6 +12,25 @@ export type ExportParams = {
   readonly items: readonly DecryptedItem[];
   readonly vaultNames: ReadonlyMap<string, string>;
   readonly exportedAt: string;
+  readonly lang?: MessageLang;
+};
+
+const PLAIN_EXPORT_WARNING: Readonly<Record<MessageLang, string>> = {
+  en:
+    "This file is NOT encrypted and contains all of your passwords in readable form. " +
+    "Anyone who can open this file will see everything — keep it safe or delete it when you're done.",
+  th:
+    "ไฟล์นี้ไม่ได้เข้ารหัส และมีรหัสผ่านทั้งหมดของคุณอยู่ในรูปที่อ่านได้ " +
+    "ใครก็ตามที่เปิดไฟล์นี้ได้ จะเห็นทุกอย่าง — เก็บให้ปลอดภัยหรือลบทิ้งเมื่อใช้เสร็จ",
+};
+
+const ENCRYPTED_EXPORT_WARNING: Readonly<Record<MessageLang, string>> = {
+  en:
+    "This file is encrypted with the password you set when exporting. " +
+    "If you forget that password, nobody can ever open this file again — including the Kunjae developers.",
+  th:
+    "ไฟล์นี้เข้ารหัสด้วยรหัสผ่านที่คุณตั้งไว้ตอนส่งออก " +
+    "ถ้าลืมรหัสผ่านนั้น จะไม่มีใครเปิดไฟล์นี้ได้อีกเลย รวมถึงผู้พัฒนา Kunjae",
 };
 
 export const buildVaultExport = (params: ExportParams): string => {
@@ -20,9 +39,7 @@ export const buildVaultExport = (params: ExportParams): string => {
     version: EXPORT_FORMAT_VERSION,
     exportedAt: params.exportedAt,
     account: { email: params.email },
-    warning:
-      "ไฟล์นี้ไม่ได้เข้ารหัส และมีรหัสผ่านทั้งหมดของคุณอยู่ในรูปที่อ่านได้ " +
-      "ใครก็ตามที่เปิดไฟล์นี้ได้ จะเห็นทุกอย่าง — เก็บให้ปลอดภัยหรือลบทิ้งเมื่อใช้เสร็จ",
+    warning: PLAIN_EXPORT_WARNING[params.lang ?? "en"],
     items: params.items.map((item) => ({
       itemId: item.itemId,
       vault: params.vaultNames.get(item.vaultId) ?? item.vaultId,
@@ -75,6 +92,7 @@ export type EncryptedExport = {
 export const encryptExport = async (
   plaintext: string,
   password: string,
+  lang: MessageLang = "en",
 ): Promise<CryptoResult<EncryptedExport>> => {
   if (password.length < MIN_EXPORT_PASSWORD_LENGTH) {
     return err(invalidParameter("password"));
@@ -108,9 +126,7 @@ export const encryptExport = async (
         saltBase64Url: bytesToBase64Url(salt.value),
         nonceBase64Url: bytesToBase64Url(sealed.value.nonce),
         ciphertextBase64Url: bytesToBase64Url(sealed.value.ciphertext),
-        warning:
-          "ไฟล์นี้เข้ารหัสด้วยรหัสผ่านที่คุณตั้งไว้ตอนส่งออก " +
-          "ถ้าลืมรหัสผ่านนั้น จะไม่มีใครเปิดไฟล์นี้ได้อีกเลย รวมถึงผู้พัฒนา Kunjae",
+        warning: ENCRYPTED_EXPORT_WARNING[lang],
       });
     } finally {
       wipe(derived.value);
@@ -241,7 +257,7 @@ export const importVaultExport = async (
 
   if (params.document.includes("kunjae.export.encrypted")) {
     const opened = await decryptExport(params.document, params.password);
-    if (!opened.ok) return err(invalidInput("รหัสผ่านของไฟล์"));
+    if (!opened.ok) return err(invalidInput("exportPassword"));
     plain = opened.value;
   }
 
@@ -249,16 +265,16 @@ export const importVaultExport = async (
   try {
     parsed = JSON.parse(plain);
   } catch {
-    return err(invalidInput("ไฟล์ส่งออก"));
+    return err(invalidInput("exportFile"));
   }
 
-  if (typeof parsed !== "object" || parsed === null) return err(invalidInput("ไฟล์ส่งออก"));
+  if (typeof parsed !== "object" || parsed === null) return err(invalidInput("exportFile"));
 
   const record = parsed as Record<string, unknown>;
-  if (record["format"] !== "kunjae.export") return err(invalidInput("ไฟล์ส่งออก"));
+  if (record["format"] !== "kunjae.export") return err(invalidInput("exportFile"));
 
   const rawItems = record["items"];
-  if (!Array.isArray(rawItems)) return err(invalidInput("ไฟล์ส่งออก"));
+  if (!Array.isArray(rawItems)) return err(invalidInput("exportFile"));
 
   const existing = new Set(readAllItems().map((item) => fingerprintOf(item.content)));
 

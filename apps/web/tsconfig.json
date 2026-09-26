@@ -3,19 +3,20 @@
   "compilerOptions": {
     "rootDir": ".",
     "noEmit": true,
-
-    /* ── ชนิดข้อมูลของเบราว์เซอร์ ──────────────────────────────────────
-     * แอปนี้รันในเบราว์เซอร์จริง จึงต้องมี DOM
-     * ส่วนการห้ามแตะที่เก็บข้อมูลถาวรเป็นหน้าที่ของ ESLint (หมวด 5.6)
-     * ไม่ใช่การตัด DOM ออกจาก lib เพราะเราต้องใช้ DOM จริงๆ ที่นี่
-     */
-    "lib": ["ES2022", "DOM", "DOM.Iterable"],
-
-    /* Vite ใช้ esbuild แปลง JSX ให้ เราจึงบอก TypeScript ให้ตรวจอย่างเดียว */
+    "lib": [
+      "ES2022",
+      "DOM",
+      "DOM.Iterable"
+    ],
     "jsx": "react-jsx",
-    "types": ["vite/client"],
-
+    "types": [
+      "vite/client"
+    ],
     "allowImportingTsExtensions": true
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx", "vite.config.ts"]
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "vite.config.ts"
+  ]
 }

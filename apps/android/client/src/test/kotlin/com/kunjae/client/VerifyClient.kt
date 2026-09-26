@@ -44,7 +44,7 @@ fun main() {
 
     val state = valueOf(pull(api, session))
     check("ดึงข้อมูลสำเร็จ", state != null)
-    check("⭐ ถอดชื่อ vault ที่ Kotlin เข้ารหัสไว้เองได้", state?.vaults?.values?.first()?.name == "ส่วนตัว")
+    check("⭐ ถอดชื่อ vault ที่ Kotlin เข้ารหัสไว้เองได้", state?.vaults?.values?.first()?.name == "Personal")
 
     println("\n── 3. เก็บรหัสผ่านและอ่านกลับ ──")
     val vaultId = session.vaultIds().first()

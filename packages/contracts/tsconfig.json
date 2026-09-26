@@ -3,17 +3,14 @@
   "compilerOptions": {
     "rootDir": "src",
     "noEmit": true,
-
-    /* ต้องมี DOM เพราะเรา import ซอร์สของ @kunjae/core-crypto โดยตรง
-       (แพตเทิร์น Just-in-Time Package) ซึ่งอ้างถึงชนิดของ WebCrypto
-       เช่น CryptoKey, SubtleCrypto, TextEncoder
-
-       การเปิด DOM ทำให้ window และ localStorage กลับมาเรียกได้ในทางทฤษฎี
-       แต่ ESLint ของเราแบนไว้แล้วทั้งหมดผ่าน no-restricted-globals
-       ซึ่งครอบคลุมกว่า tsconfig ด้วยซ้ำ เพราะแบน fetch และ console ได้ด้วย */
-    "lib": ["ES2022", "DOM"],
+    "lib": [
+      "ES2022",
+      "DOM"
+    ],
     "types": [],
     "allowImportingTsExtensions": true
   },
-  "include": ["src/**/*.ts"]
+  "include": [
+    "src/**/*.ts"
+  ]
 }

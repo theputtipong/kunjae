@@ -1,5 +1,6 @@
 package com.kunjae.app
 
+import android.content.Context
 import android.app.PendingIntent
 import android.app.assist.AssistStructure
 import android.content.Intent
@@ -85,7 +86,7 @@ class KunjaeAutofillService : AutofillService() {
                 val urls = (entry.item as? LoginItem)?.urls
                 decideAutofill(fields.webDomain, urls?.firstOrNull()) is AutofillDecision.Allowed
             }
-            diagnose("matches=${matches.size} จากทั้งหมด ${ItemStore.all().size} รายการ")
+            diagnose("matches=${matches.size} of ${ItemStore.all().size} items")
             callback.onSuccess(responseFor(matches, fields))
             return
         }
@@ -109,11 +110,11 @@ class KunjaeAutofillService : AutofillService() {
             }
 
             diagnose(
-                "แอปพื้นเมือง $target: ผ่าน Asset Links ${matches.size} รายการ" +
+                "native app $target: ${matches.size} items verified by Asset Links" +
                     if (AssetLinksVerifier.canReadCertificate(applicationContext, target)) {
                         ""
                     } else {
-                        " (อ่านใบรับรองของแอปนั้นไม่ได้)"
+                        " (could not read that app's certificate)"
                     },
             )
 
@@ -159,7 +160,7 @@ class KunjaeAutofillService : AutofillService() {
         requestCode: Int,
     ): Dataset {
         val presentation = RemoteViews(packageName, android.R.layout.simple_list_item_1).apply {
-            setTextViewText(android.R.id.text1, "${item.title} · รหัส 2FA")
+            setTextViewText(android.R.id.text1, localized().getString(R.string.autofill_otp_label, item.title))
         }
 
         val intent = Intent(this, OtpFillActivity::class.java)
@@ -256,6 +257,8 @@ class KunjaeAutofillService : AutofillService() {
     }
 
     override fun onSaveRequest(request: SaveRequest, callback: SaveCallback) {
-        callback.onFailure("Kunjae ยังไม่รองรับการบันทึกอัตโนมัติ")
+        callback.onFailure(localized().getString(R.string.autofill_save_unsupported))
     }
+
+    private fun localized(): Context = AppLocale.wrap(this)
 }

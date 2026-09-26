@@ -1,18 +1,28 @@
 import {
+  changeLocalPassword,
   clearStore,
   configureApi,
+  configureLocalPersistence,
+  createIndexedDbPersistence,
+  createLocalVault,
   createUlid,
+  deleteLocalVault,
   getDefaultVaultId,
   getItemContent,
   getItemRef,
+  getLocalVaultSummary,
   getSessionView,
   getStoreView,
+  hasLocalVault,
   lockSession,
+  migrateLocalToAccount,
   pull,
   saveItem,
   signUp,
   subscribeToSession,
   unlock,
+  unlockLocal,
+  type AppError,
 } from "@kunjae/client-core";
 import { emptyLoginItem } from "@kunjae/domain";
 import { browser, defineBackground } from "#imports";
@@ -22,7 +32,56 @@ import { totpFromSecretText } from "@kunjae/core-crypto";
 import { apiBaseUrl } from "../config.ts";
 import { decideFill, hostOf } from "../origin.ts";
 import { fillCredentials, fillOtpCode } from "../fill-form.ts";
-import { RequestSchema, type ItemBrief, type Response } from "../messaging.ts";
+import {
+  RequestSchema,
+  type ErrorCode,
+  type ItemBrief,
+  type LocalBrief,
+  type Response,
+} from "../messaging.ts";
+import { dictionary, resolveLang } from "../i18n.ts";
+
+const fail = (error: ErrorCode): Response => ({ ok: false, error });
+
+const codeFor = (error: AppError, fallback: ErrorCode): ErrorCode => {
+  switch (error.kind) {
+    case "WrongDevicePassword":
+      return "wrong-device-password";
+    case "LocalVaultExists":
+      return "local-vault-exists";
+    case "LocalVaultMissing":
+      return "local-vault-missing";
+    case "LocalVaultCorrupt":
+      return "local-vault-corrupt";
+    case "LocalStorageFailed":
+      return "local-storage-failed";
+    case "AccountRequired":
+      return "account-required";
+    case "SessionExpired":
+      return "session-expired";
+    case "Offline":
+      return "offline";
+    default:
+      return fallback;
+  }
+};
+
+let migrationDismissed = false;
+
+const localBrief = async (): Promise<LocalBrief> => {
+  const exists = await hasLocalVault();
+  if (!exists) return { exists, itemCount: null, offerMigration: false };
+
+  const summary = await getLocalVaultSummary();
+  const itemCount = summary.ok ? (summary.value?.itemCount ?? null) : null;
+
+  return {
+    exists,
+    itemCount,
+    offerMigration:
+      getSessionView().mode === "account" && !migrationDismissed && itemCount !== null && itemCount > 0,
+  };
+};
 
 const listItems = (): readonly ItemBrief[] =>
   getStoreView()
@@ -42,28 +101,27 @@ const listItems = (): readonly ItemBrief[] =>
 
 const handleFill = async (itemId: string): Promise<Response> => {
   const content = getItemContent(itemId);
-  if (content?.type !== "login") return { ok: false, message: "ไม่พบรายการนี้" };
+  if (content?.type !== "login") return fail("item-not-found");
 
   const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
-  if (tab?.id === undefined) return { ok: false, message: "ไม่พบหน้าเว็บที่เปิดอยู่" };
+  if (tab?.id === undefined) return fail("no-active-tab");
 
   const decision = decideFill(tab.url, content.urls[0]);
 
   if (!decision.allowed) {
     switch (decision.reason) {
       case "no-saved-url":
-        return { ok: false, message: "รายการนี้ไม่ได้บันทึกที่อยู่เว็บไว้ จึงเติมให้ไม่ได้" };
+        return fail("no-saved-url");
       case "unsupported-page":
-        return { ok: false, message: "หน้านี้ไม่ใช่หน้าเว็บปกติ จึงเติมให้ไม่ได้" };
+        return fail("unsupported-page");
       case "no-tab-access":
-        return {
-          ok: false,
-          message: "ยังไม่ได้รับสิทธิ์อ่านหน้านี้ — เปิด Kunjae จากไอคอนบนแถบเครื่องมือแล้วลองใหม่",
-        };
+        return fail("no-tab-access");
       case "origin-mismatch":
         return {
           ok: false,
-          message: `ที่อยู่ของหน้านี้ (${decision.tabOrigin}) ไม่ตรงกับที่บันทึกไว้ (${decision.savedOrigin})`,
+          error: "origin-mismatch",
+          tabOrigin: decision.tabOrigin,
+          savedOrigin: decision.savedOrigin,
         };
     }
   }
@@ -76,38 +134,36 @@ const handleFill = async (itemId: string): Promise<Response> => {
       args: [content.username, content.password],
     });
   } catch {
-    return {
-      ok: false,
-      message: "เข้าถึงหน้านี้ไม่ได้ — เปิด Kunjae จากไอคอนบนแถบเครื่องมือแล้วลองใหม่",
-    };
+    return fail("page-inaccessible");
   }
 
   const filled = results[0]?.result === true;
-  return filled ? { ok: true, kind: "done" } : { ok: false, message: "ไม่พบช่องรหัสผ่านในหน้านี้" };
+  return filled ? { ok: true, kind: "done" } : fail("no-password-field");
 };
 
 const handleFillTotp = async (itemId: string): Promise<Response> => {
   const content = getItemContent(itemId);
   if (content?.type !== "login" || content.totpSecret === "") {
-    return { ok: false, message: "รายการนี้ไม่ได้ตั้งรหัสผ่านครั้งเดียวไว้" };
+    return fail("no-totp");
   }
 
   const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
-  if (tab?.id === undefined) return { ok: false, message: "ไม่พบหน้าเว็บที่เปิดอยู่" };
+  if (tab?.id === undefined) return fail("no-active-tab");
 
   const decision = decideFill(tab.url, content.urls[0]);
   if (!decision.allowed) {
-    return {
-      ok: false,
-      message:
-        decision.reason === "origin-mismatch"
-          ? `ที่อยู่ของหน้านี้ (${decision.tabOrigin}) ไม่ตรงกับที่บันทึกไว้ (${decision.savedOrigin})`
-          : "เติมรหัสในหน้านี้ไม่ได้",
-    };
+    return decision.reason === "origin-mismatch"
+      ? {
+          ok: false,
+          error: "origin-mismatch",
+          tabOrigin: decision.tabOrigin,
+          savedOrigin: decision.savedOrigin,
+        }
+      : fail("totp-fill-unavailable");
   }
 
   const computed = totpFromSecretText(content.totpSecret, Date.now());
-  if (!computed.ok) return { ok: false, message: "ความลับ TOTP อ่านไม่ได้" };
+  if (!computed.ok) return fail("totp-unreadable");
 
   let results: { readonly result?: unknown }[];
   try {
@@ -117,36 +173,34 @@ const handleFillTotp = async (itemId: string): Promise<Response> => {
       args: [computed.value.code],
     });
   } catch {
-    return {
-      ok: false,
-      message: "เข้าถึงหน้านี้ไม่ได้ — เปิด Kunjae จากไอคอนบนแถบเครื่องมือแล้วลองใหม่",
-    };
+    return fail("page-inaccessible");
   }
 
   return results[0]?.result === true
     ? { ok: true, kind: "done" }
-    : {
-        ok: false,
-        message: "หน้านี้ไม่ได้ประกาศช่องรหัส 2FA ตามมาตรฐาน — กดคัดลอกแล้ววางเองได้",
-      };
+    : fail("no-otp-field");
 };
 
 let toolbarTheme: "light" | "dark" = "light";
 
 const updateActionIcon = (): void => {
-  const state = getSessionView().status === "unlocked" ? "unlocked" : "locked";
+  const t = dictionary();
+  const view = getSessionView();
+  const state = view.status === "unlocked" ? "unlocked" : "locked";
   void browser.action.setIcon({
     path: {
       16: `/action/${state}-${toolbarTheme}-16.png`,
       32: `/action/${state}-${toolbarTheme}-32.png`,
     },
   });
-  void browser.action.setTitle({ title: state === "unlocked" ? "Kunjae — ปลดล็อกอยู่" : "Kunjae — ล็อกอยู่" });
+  const title =
+    state === "locked" ? t.actionLocked : view.mode === "local" ? t.actionUnlockedLocal : t.actionUnlocked;
+  void browser.action.setTitle({ title });
 };
 
 const handle = async (request: unknown): Promise<Response> => {
   const parsed = RequestSchema.safeParse(request);
-  if (!parsed.success) return { ok: false, message: "คำขอไม่ถูกต้อง" };
+  if (!parsed.success) return fail("invalid-request");
 
   switch (parsed.data.kind) {
     case "status": {
@@ -154,8 +208,60 @@ const handle = async (request: unknown): Promise<Response> => {
         toolbarTheme = parsed.data.theme;
         updateActionIcon();
       }
+      const local = await localBrief();
       const view = getSessionView();
-      return { ok: true, kind: "status", unlocked: view.status === "unlocked", email: view.email };
+      return {
+        ok: true,
+        kind: "status",
+        unlocked: view.status === "unlocked",
+        mode: view.mode,
+        email: view.email,
+        local,
+      };
+    }
+
+    case "local-status":
+      return { ok: true, kind: "local-status", local: await localBrief() };
+
+    case "local-create": {
+      const created = await createLocalVault({
+        masterPassword: parsed.data.masterPassword,
+        lang: resolveLang(),
+      });
+      return created.ok ? { ok: true, kind: "done" } : fail(codeFor(created.error, "internal"));
+    }
+
+    case "local-unlock": {
+      const opened = await unlockLocal({ masterPassword: parsed.data.masterPassword });
+      return opened.ok ? { ok: true, kind: "done" } : fail(codeFor(opened.error, "internal"));
+    }
+
+    case "local-change-password": {
+      const changed = await changeLocalPassword({
+        current: parsed.data.current,
+        next: parsed.data.next,
+      });
+      return changed.ok ? { ok: true, kind: "done" } : fail(codeFor(changed.error, "internal"));
+    }
+
+    case "local-delete": {
+      const deleted = await deleteLocalVault();
+      return deleted.ok ? { ok: true, kind: "done" } : fail(codeFor(deleted.error, "internal"));
+    }
+
+    case "local-migrate": {
+      const migrated = await migrateLocalToAccount({
+        devicePassword: parsed.data.devicePassword,
+        nowMs: Date.now(),
+      });
+      if (!migrated.ok) return fail(codeFor(migrated.error, "internal"));
+
+      return { ok: true, kind: "migrated", ...migrated.value };
+    }
+
+    case "local-dismiss-migration": {
+      migrationDismissed = true;
+      return { ok: true, kind: "done" };
     }
 
     case "unlock": {
@@ -165,10 +271,13 @@ const handle = async (request: unknown): Promise<Response> => {
         secretKeyText: parsed.data.secretKeyText,
         nowMs: Date.now(),
       });
-      if (!result.ok) return { ok: false, message: "ปลดล็อกไม่สำเร็จ — ตรวจสอบรหัสผ่านและ Secret Key" };
+      if (!result.ok) return fail(result.error.kind === "Offline" ? "offline" : "unlock-failed");
+
+      clearStore();
+      migrationDismissed = false;
 
       const pulled = await pull(Date.now());
-      if (!pulled.ok) return { ok: false, message: "ปลดล็อกได้แต่ดึงข้อมูลไม่สำเร็จ" };
+      if (!pulled.ok) return fail("sync-failed");
 
       return { ok: true, kind: "done" };
     }
@@ -179,8 +288,10 @@ const handle = async (request: unknown): Promise<Response> => {
         masterPassword: parsed.data.masterPassword,
         nowMs: Date.now(),
       });
-      if (!created.ok) return { ok: false, message: "สมัครสมาชิกไม่สำเร็จ — อีเมลนี้อาจถูกใช้แล้ว" };
+      if (!created.ok) return fail("sign-up-failed");
 
+      clearStore();
+      migrationDismissed = false;
       await pull(Date.now());
 
       return {
@@ -202,18 +313,18 @@ const handle = async (request: unknown): Promise<Response> => {
 
     case "reveal": {
       const content = getItemContent(parsed.data.itemId);
-      if (content?.type !== "login") return { ok: false, message: "ไม่พบรายการนี้" };
+      if (content?.type !== "login") return fail("item-not-found");
       return { ok: true, kind: "reveal", password: content.password };
     }
 
     case "totp": {
       const content = getItemContent(parsed.data.itemId);
       if (content?.type !== "login" || content.totpSecret === "") {
-        return { ok: false, message: "รายการนี้ไม่ได้ตั้งรหัสผ่านครั้งเดียวไว้" };
+        return fail("no-totp");
       }
 
       const result = totpFromSecretText(content.totpSecret, Date.now());
-      if (!result.ok) return { ok: false, message: "ความลับ TOTP อ่านไม่ได้" };
+      if (!result.ok) return fail("totp-unreadable");
 
       return {
         ok: true,
@@ -225,7 +336,7 @@ const handle = async (request: unknown): Promise<Response> => {
 
     case "load-for-edit": {
       const content = getItemContent(parsed.data.itemId);
-      if (content?.type !== "login") return { ok: false, message: "แก้ไขรายการประเภทนี้จากส่วนขยายไม่ได้" };
+      if (content?.type !== "login") return fail("edit-unsupported");
 
       return {
         ok: true,
@@ -264,7 +375,7 @@ const handleSave = async (params: {
   const existing = params.itemId === null ? null : getItemContent(params.itemId);
 
   if (params.itemId !== null && (existingRef === null || existing?.type !== "login")) {
-    return { ok: false, message: "ไม่พบรายการนี้" };
+    return fail("item-not-found");
   }
 
   const base = existing?.type === "login" ? existing : emptyLoginItem(params.title, now);
@@ -280,13 +391,13 @@ const handleSave = async (params: {
   };
 
   const vaultId = existingRef?.vaultId ?? getDefaultVaultId();
-  if (vaultId === null) return { ok: false, message: "ยังไม่มี vault ให้บันทึก" };
+  if (vaultId === null) return fail("no-vault");
 
   const itemId = params.itemId ?? (() => {
     const generated = createUlid(nowMs);
     return generated.ok ? generated.value : null;
   })();
-  if (itemId === null) return { ok: false, message: "สร้างรหัสรายการไม่สำเร็จ" };
+  if (itemId === null) return fail("id-failed");
 
   const saved = await saveItem({
     itemId,
@@ -296,21 +407,30 @@ const handleSave = async (params: {
     nowMs,
   });
 
-  if (!saved.ok) return { ok: false, message: "บันทึกไม่สำเร็จ — อาจมีเครื่องอื่นแก้รายการนี้ไปแล้ว" };
+  if (!saved.ok) return fail(codeFor(saved.error, "save-conflict"));
 
   return { ok: true, kind: "done" };
 };
 
 export default defineBackground(() => {
   const configured = configureApi(apiBaseUrl());
-  if (!configured.ok) throw new Error("ที่อยู่ API ไม่ถูกต้อง");
+  if (!configured.ok) throw new Error("Invalid API base URL");
+
+  // eslint-disable-next-line no-restricted-globals
+  configureLocalPersistence(createIndexedDbPersistence(indexedDB));
 
   updateActionIcon();
   subscribeToSession(updateActionIcon);
 
+  browser.runtime.onInstalled.addListener(({ reason }) => {
+    if (reason === "install") {
+      void browser.tabs.create({ url: browser.runtime.getURL("/signup.html?mode=welcome") });
+    }
+  });
+
   browser.runtime.onMessage.addListener((message: unknown, _sender, sendResponse) => {
     handle(message).then(sendResponse, () => {
-      sendResponse({ ok: false, message: "เกิดข้อผิดพลาดภายใน" } satisfies Response);
+      sendResponse(fail("internal"));
     });
 
     return true;

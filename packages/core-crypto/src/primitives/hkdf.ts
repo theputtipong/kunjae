@@ -23,7 +23,13 @@ export const KEY_PURPOSE = {
   MASTER_UNLOCK_KEY: "kunjae.v1.master-unlock-key",
 } as const;
 
-export type KeyPurpose = (typeof KEY_PURPOSE)[keyof typeof KEY_PURPOSE];
+export const LOCAL_KEY_PURPOSE = {
+  LOCAL_VAULT_WRAPPING: "kunjae.local.wrap.v1",
+} as const;
+
+export type KeyPurpose =
+  | (typeof KEY_PURPOSE)[keyof typeof KEY_PURPOSE]
+  | (typeof LOCAL_KEY_PURPOSE)[keyof typeof LOCAL_KEY_PURPOSE];
 
 const PURPOSE_ENCODER = new TextEncoder();
 

@@ -1,6 +1,5 @@
 package com.kunjae.app.ui
 
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.ButtonDefaults
@@ -90,9 +89,9 @@ private val KunjaeShapes = Shapes(
 )
 
 @Composable
-fun KunjaeTheme(content: @Composable () -> Unit) {
+fun KunjaeTheme(darkTheme: Boolean, content: @Composable () -> Unit) {
     MaterialTheme(
-        colorScheme = if (isSystemInDarkTheme()) Dark else Light,
+        colorScheme = if (darkTheme) Dark else Light,
         shapes = KunjaeShapes,
         content = content,
     )

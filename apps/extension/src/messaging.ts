@@ -57,6 +57,40 @@ export const SignUpRequestSchema = z.strictObject({
   masterPassword: z.string().min(12).max(1024),
 });
 
+const DevicePasswordSchema = z.string().min(12).max(1024);
+
+export const LocalStatusRequestSchema = z.strictObject({ kind: z.literal("local-status") });
+
+export const LocalCreateRequestSchema = z.strictObject({
+  kind: z.literal("local-create"),
+  masterPassword: DevicePasswordSchema,
+});
+
+export const LocalUnlockRequestSchema = z.strictObject({
+  kind: z.literal("local-unlock"),
+  masterPassword: DevicePasswordSchema,
+});
+
+export const LocalChangePasswordRequestSchema = z.strictObject({
+  kind: z.literal("local-change-password"),
+  current: DevicePasswordSchema,
+  next: DevicePasswordSchema,
+});
+
+export const LocalDeleteRequestSchema = z.strictObject({
+  kind: z.literal("local-delete"),
+  confirm: z.literal(true),
+});
+
+export const LocalMigrateRequestSchema = z.strictObject({
+  kind: z.literal("local-migrate"),
+  devicePassword: DevicePasswordSchema,
+});
+
+export const LocalDismissMigrationRequestSchema = z.strictObject({
+  kind: z.literal("local-dismiss-migration"),
+});
+
 export const RequestSchema = z.discriminatedUnion("kind", [
   UnlockRequestSchema,
   LockRequestSchema,
@@ -69,9 +103,57 @@ export const RequestSchema = z.discriminatedUnion("kind", [
   SaveItemRequestSchema,
   FillTotpRequestSchema,
   SignUpRequestSchema,
+  LocalStatusRequestSchema,
+  LocalCreateRequestSchema,
+  LocalUnlockRequestSchema,
+  LocalChangePasswordRequestSchema,
+  LocalDeleteRequestSchema,
+  LocalMigrateRequestSchema,
+  LocalDismissMigrationRequestSchema,
 ]);
 
 export type Request = z.infer<typeof RequestSchema>;
+
+export type ErrorCode =
+  | "invalid-request"
+  | "item-not-found"
+  | "no-active-tab"
+  | "no-saved-url"
+  | "unsupported-page"
+  | "no-tab-access"
+  | "page-inaccessible"
+  | "no-password-field"
+  | "no-totp"
+  | "totp-fill-unavailable"
+  | "totp-unreadable"
+  | "no-otp-field"
+  | "unlock-failed"
+  | "sync-failed"
+  | "sign-up-failed"
+  | "edit-unsupported"
+  | "no-vault"
+  | "id-failed"
+  | "save-conflict"
+  | "wrong-device-password"
+  | "local-vault-exists"
+  | "local-vault-missing"
+  | "local-vault-corrupt"
+  | "local-storage-failed"
+  | "account-required"
+  | "session-expired"
+  | "offline"
+  | "internal"
+  | "no-response"
+  | "bad-response";
+
+export type ErrorResponse =
+  | { readonly ok: false; readonly error: ErrorCode }
+  | {
+      readonly ok: false;
+      readonly error: "origin-mismatch";
+      readonly tabOrigin: string;
+      readonly savedOrigin: string;
+    };
 
 export type ItemBrief = {
   readonly itemId: string;
@@ -81,8 +163,31 @@ export type ItemBrief = {
   readonly hasTotp: boolean;
 };
 
+export type SessionMode = "account" | "local";
+
+export type LocalBrief = {
+  readonly exists: boolean;
+  readonly itemCount: number | null;
+  readonly offerMigration: boolean;
+};
+
+export type MigrationResult = {
+  readonly moved: number;
+  readonly failed: number;
+  readonly cleared: boolean;
+};
+
 export type Response =
-  | { readonly ok: true; readonly kind: "status"; readonly unlocked: boolean; readonly email: string | null }
+  | {
+      readonly ok: true;
+      readonly kind: "status";
+      readonly unlocked: boolean;
+      readonly mode: SessionMode | null;
+      readonly email: string | null;
+      readonly local: LocalBrief;
+    }
+  | { readonly ok: true; readonly kind: "local-status"; readonly local: LocalBrief }
+  | ({ readonly ok: true; readonly kind: "migrated" } & MigrationResult)
   | { readonly ok: true; readonly kind: "list"; readonly items: readonly ItemBrief[] }
   | { readonly ok: true; readonly kind: "reveal"; readonly password: string }
   | {
@@ -107,4 +212,4 @@ export type Response =
       readonly secondsRemaining: number;
     }
   | { readonly ok: true; readonly kind: "done" }
-  | { readonly ok: false; readonly message: string };
+  | ErrorResponse;

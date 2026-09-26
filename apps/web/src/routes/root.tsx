@@ -7,9 +7,12 @@ import { useSession } from "../session/use-session.ts";
 import { KunjaeMark } from "../ui/kunjae-mark.tsx";
 import { InstallPrompt } from "../ui/install-prompt.tsx";
 import { clearStore } from "@kunjae/client-core";
+import { useT } from "../i18n/index.ts";
+import { LanguageToggle, SupportLink, ThemeToggle } from "../ui/preferences.tsx";
 
 export const RootLayout = () => {
   const session = useSession();
+  const t = useT();
   const previousStatus = useRef(session.status);
 
   useEffect(() => {
@@ -25,34 +28,51 @@ export const RootLayout = () => {
 
   return (
     <div className="min-h-dvh">
-      <header className="border-b border-stone-200 bg-white/80 backdrop-blur">
-        <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-6 py-3">
-          <Link to="/vault" className="flex items-center gap-2 text-base font-semibold text-stone-900">
-            <KunjaeMark size={32} unlocked={session.status === "unlocked"} />
-            Kunjae
-            <span className="sr-only">{session.status === "unlocked" ? " (ปลดล็อกอยู่)" : " (ล็อกอยู่)"}</span>
-          </Link>
+      <header className="border-b border-stone-200 bg-surface/80 backdrop-blur">
+        <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-3 sm:px-6">
+          <div className="flex items-center gap-2">
+            <Link to="/vault" className="flex items-center gap-2 text-base font-semibold text-stone-900">
+              <KunjaeMark size={32} unlocked={session.status === "unlocked"} />
+              Kunjae
+              <span className="sr-only">{session.status === "unlocked" ? t.header.unlockedSr : t.header.lockedSr}</span>
+            </Link>
 
-          {session.status === "unlocked" && (
-            <nav className="flex items-center gap-3 text-sm">
-              <Link to="/vault" className="text-stone-600 hover:text-stone-900">
-                รายการ
-              </Link>
-              <Link to="/settings" className="text-stone-600 hover:text-stone-900">
-                ตั้งค่า
-              </Link>
-              <button
-                type="button"
-                onClick={() => {
-                  lockSession();
-                  clearStore();
-                }}
-                className="rounded-full bg-brand-400 px-4 py-1.5 font-medium text-brand-950 hover:bg-brand-300"
+            {session.mode === "local" && (
+              <span
+                title={t.local.badgeTitle}
+                className="rounded-full border border-stone-300 bg-stone-100 px-2.5 py-0.5 text-xs font-medium text-stone-700"
               >
-                ล็อก
-              </button>
-            </nav>
-          )}
+                {t.local.badge}
+              </span>
+            )}
+          </div>
+
+          <div className="flex items-center gap-3">
+            {session.status === "unlocked" && (
+              <nav className="flex items-center gap-3 text-sm">
+                <Link to="/vault" className="text-stone-600 hover:text-stone-900">
+                  {t.header.items}
+                </Link>
+                <Link to="/settings" className="text-stone-600 hover:text-stone-900">
+                  {t.header.settings}
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => {
+                    lockSession();
+                    clearStore();
+                  }}
+                  className="rounded-full bg-brand-400 px-4 py-1.5 font-medium text-brand-950 hover:bg-brand-300"
+                >
+                  {t.common.lock}
+                </button>
+              </nav>
+            )}
+            <div className="flex items-center gap-1.5">
+              <LanguageToggle />
+              <ThemeToggle />
+            </div>
+          </div>
         </div>
       </header>
 
@@ -60,8 +80,11 @@ export const RootLayout = () => {
 
       <InstallPrompt />
 
-      <footer className="mx-auto max-w-5xl px-6 py-8 text-center text-xs text-stone-500">
-        ข้อมูลของคุณถูกเข้ารหัสในเบราว์เซอร์นี้ก่อนออกจากเครื่องเสมอ
+      <footer className="mx-auto max-w-5xl space-y-2 px-6 py-8 text-center text-xs text-stone-500">
+        <p>{t.footer.encrypted}</p>
+        <p>
+          <SupportLink />
+        </p>
       </footer>
     </div>
   );

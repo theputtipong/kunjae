@@ -24,6 +24,6 @@ export const configureApi = (rawUrl: string): CryptoResult<string> => {
 };
 
 export const getApiBaseUrl = (): string => {
-  if (baseUrl === null) throw new Error("ยังไม่ได้เรียก configureApi");
+  if (baseUrl === null) throw new Error("configureApi has not been called");
   return baseUrl;
 };

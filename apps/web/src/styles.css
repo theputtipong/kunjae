@@ -14,6 +14,98 @@
   --color-brand-950: #241a00;
 
   --color-canvas: #fff8f0;
+  --color-surface: #ffffff;
+}
+
+:root {
+  color-scheme: light;
+  --kunjae-tile-edge: transparent;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --color-canvas: #17130b;
+  --color-surface: #211b12;
+  --kunjae-tile-edge: rgb(255 201 51 / 0.28);
+
+  --color-stone-50: #2a2318;
+  --color-stone-100: #30281c;
+  --color-stone-200: #3d3427;
+  --color-stone-300: #52473a;
+  --color-stone-400: #8a7f70;
+  --color-stone-500: #aa9f8f;
+  --color-stone-600: #c4b9a8;
+  --color-stone-700: #d9cfbf;
+  --color-stone-800: #e8e0d3;
+  --color-stone-900: #f5efe4;
+  --color-stone-950: #fbf8f2;
+
+  --color-brand-50: #2b2310;
+  --color-brand-100: #3a2e0d;
+  --color-brand-600: #e0a800;
+  --color-brand-700: #ffc933;
+  --color-brand-800: #ffd35c;
+  --color-brand-900: #ffd35c;
+
+  --color-red-50: #3a1714;
+  --color-red-300: #8c3a32;
+  --color-red-700: #ff9b8f;
+  --color-red-800: #ffb0a6;
+  --color-red-900: #ffd2cc;
+
+  --color-amber-50: #33260c;
+  --color-amber-300: #8a6414;
+  --color-amber-900: #ffe2a3;
+
+  --color-emerald-50: #10291f;
+  --color-emerald-100: #173826;
+  --color-emerald-300: #2f6f52;
+  --color-emerald-900: #b5f0d3;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+
+    --color-canvas: #17130b;
+    --color-surface: #211b12;
+    --kunjae-tile-edge: rgb(255 201 51 / 0.28);
+
+    --color-stone-50: #2a2318;
+    --color-stone-100: #30281c;
+    --color-stone-200: #3d3427;
+    --color-stone-300: #52473a;
+    --color-stone-400: #8a7f70;
+    --color-stone-500: #aa9f8f;
+    --color-stone-600: #c4b9a8;
+    --color-stone-700: #d9cfbf;
+    --color-stone-800: #e8e0d3;
+    --color-stone-900: #f5efe4;
+    --color-stone-950: #fbf8f2;
+
+    --color-brand-50: #2b2310;
+    --color-brand-100: #3a2e0d;
+    --color-brand-600: #e0a800;
+    --color-brand-700: #ffc933;
+    --color-brand-800: #ffd35c;
+    --color-brand-900: #ffd35c;
+
+    --color-red-50: #3a1714;
+    --color-red-300: #8c3a32;
+    --color-red-700: #ff9b8f;
+    --color-red-800: #ffb0a6;
+    --color-red-900: #ffd2cc;
+
+    --color-amber-50: #33260c;
+    --color-amber-300: #8a6414;
+    --color-amber-900: #ffe2a3;
+
+    --color-emerald-50: #10291f;
+    --color-emerald-100: #173826;
+    --color-emerald-300: #2f6f52;
+    --color-emerald-900: #b5f0d3;
+  }
 }
 
 @layer base {

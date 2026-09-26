@@ -12,8 +12,9 @@ export default defineConfig({
   vite: () => ({ plugins: [tailwindcss()] }),
 
   manifest: {
-    name: "Kunjae",
-    description: "Zero-Knowledge Password Manager",
+    name: "__MSG_extName__",
+    description: "__MSG_extDescription__",
+    default_locale: "en",
 
     permissions: ["activeTab", "scripting", "clipboardWrite"],
 

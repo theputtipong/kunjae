@@ -1,22 +1,18 @@
 {
   "$schema": "https://json.schemastore.org/tsconfig",
   "display": "Kunjae Base Config",
-
   "compilerOptions": {
-    /* ── 1. Language & Environment ───────────────────────────── */
     "target": "ES2022",
-    "lib": ["ES2022"],
+    "lib": [
+      "ES2022"
+    ],
     "moduleDetection": "force",
     "useDefineForClassFields": true,
-
-    /* ── 2. Module Resolution ────────────────────────────────── */
     "module": "ESNext",
     "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "verbatimModuleSyntax": true,
     "allowImportingTsExtensions": false,
-
-    /* ── 3. Type Safety: ระดับสูงสุด ─────────────────────────── */
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "exactOptionalPropertyTypes": true,
@@ -26,24 +22,22 @@
     "noPropertyAccessFromIndexSignature": true,
     "allowUnreachableCode": false,
     "allowUnusedLabels": false,
-
-    /* ── 4. Code Hygiene ─────────────────────────────────────── */
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "forceConsistentCasingInFileNames": true,
-
-    /* ── 5. Emit ─────────────────────────────────────────────── */
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
     "removeComments": false,
     "isolatedModules": true,
     "skipLibCheck": true,
-
-    /* ── 6. Interop ──────────────────────────────────────────── */
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true
   },
-
-  "exclude": ["node_modules", "dist", "build", ".turbo"]
+  "exclude": [
+    "node_modules",
+    "dist",
+    "build",
+    ".turbo"
+  ]
 }

@@ -7,3 +7,55 @@
   --color-brand-700: #7a5900;
   --color-brand-950: #241a00;
 }
+
+@layer base {
+  :root {
+    color-scheme: light dark;
+    --color-page: #ffffff;
+  }
+
+  body {
+    background-color: var(--color-page);
+    color: var(--color-stone-900);
+  }
+
+  input::placeholder {
+    color: var(--color-stone-400);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-brand-400);
+    outline-offset: 2px;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-page: #17130b;
+    --color-white: #211b11;
+
+    --color-stone-50: #1d1810;
+    --color-stone-100: #262015;
+    --color-stone-200: #342c1e;
+    --color-stone-300: #54493a;
+    --color-stone-400: #857a66;
+    --color-stone-500: #a89e8b;
+    --color-stone-600: #bdb4a2;
+    --color-stone-700: #d4ccbc;
+    --color-stone-800: #e6e0d3;
+    --color-stone-900: #f4f0e7;
+    --color-stone-950: #faf8f3;
+
+    --color-brand-100: #3a2d0a;
+    --color-brand-700: #ffd35c;
+
+    --color-amber-50: #2b2110;
+    --color-amber-300: #7a5a17;
+    --color-amber-900: #fde7ad;
+
+    --color-red-50: #331512;
+    --color-red-300: #8a3a31;
+    --color-red-700: #f7a393;
+    --color-red-800: #fbb8ab;
+  }
+}

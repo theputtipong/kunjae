@@ -1,5 +1,6 @@
 package com.kunjae.app
 
+import androidx.compose.ui.res.stringResource
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -134,10 +135,10 @@ fun ItemEditScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(if (itemId == null) "รายการใหม่" else "แก้ไขรายการ") },
-                navigationIcon = { IconButton(onClick = cancel) { Icon(KIcons.Close, "ยกเลิก") } },
+                title = { Text(stringResource(if (itemId == null) R.string.edit_new_title else R.string.edit_title)) },
+                navigationIcon = { IconButton(onClick = cancel) { Icon(KIcons.Close, stringResource(R.string.cd_cancel)) } },
                 actions = {
-                    TextButton(onClick = save, enabled = !state.busy && title.isNotBlank()) { Text("บันทึก") }
+                    TextButton(onClick = save, enabled = !state.busy && title.isNotBlank()) { Text(stringResource(R.string.action_save)) }
                 },
             )
         },
@@ -159,7 +160,7 @@ fun ItemEditScreen(
                             onClick = { typeName = name },
                             shape = SegmentedButtonDefaults.itemShape(i, ITEM_TYPE_CHOICES.size),
                             icon = { Icon(iconForType(name), contentDescription = null, modifier = Modifier.size(18.dp)) },
-                        ) { Text(label) }
+                        ) { Text(stringResource(label)) }
                     }
                 }
 
@@ -167,7 +168,7 @@ fun ItemEditScreen(
                     ?: state.vaults.firstOrNull()?.name
                 if (state.vaults.size > 1 && target != null) {
                     Text(
-                        "จะบันทึกลง vault: $target — เปลี่ยนได้จากตัวเลือก vault ในหน้ารายการ",
+                        stringResource(R.string.edit_target_vault, target),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -177,7 +178,7 @@ fun ItemEditScreen(
             OutlinedTextField(
                 value = title,
                 onValueChange = { title = it },
-                label = { Text("ชื่อรายการ") },
+                label = { Text(stringResource(R.string.label_item_title)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -186,7 +187,7 @@ fun ItemEditScreen(
                 OutlinedTextField(
                     value = username,
                     onValueChange = { username = it },
-                    label = { Text("ชื่อผู้ใช้") },
+                    label = { Text(stringResource(R.string.label_username)) },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                     modifier = Modifier.fillMaxWidth(),
@@ -194,7 +195,7 @@ fun ItemEditScreen(
                 OutlinedTextField(
                     value = password,
                     onValueChange = { password = it },
-                    label = { Text("รหัสผ่าน") },
+                    label = { Text(stringResource(R.string.label_password)) },
                     singleLine = true,
                     visualTransformation = if (showPassword) VisualTransformation.None else PasswordVisualTransformation(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
@@ -205,21 +206,21 @@ fun ItemEditScreen(
                                     password = it
                                     showPassword = true
                                 }
-                            }) { Icon(KIcons.Refresh, "สร้างรหัสผ่านให้") }
+                            }) { Icon(KIcons.Refresh, stringResource(R.string.cd_generate_password)) }
                             IconButton(onClick = { showPassword = !showPassword }) {
-                                Icon(if (showPassword) KIcons.VisibilityOff else KIcons.Visibility, if (showPassword) "ซ่อน" else "แสดง")
+                                Icon(if (showPassword) KIcons.VisibilityOff else KIcons.Visibility, stringResource(if (showPassword) R.string.cd_hide else R.string.cd_show))
                             }
                         }
                     },
-                    supportingText = { Text("กดไอคอนลูกศรวนเพื่อสร้างรหัสผ่านที่แข็งแรง") },
+                    supportingText = { Text(stringResource(R.string.password_generate_hint)) },
                     modifier = Modifier.fillMaxWidth(),
                 )
                 OutlinedTextField(
                     value = url,
                     onValueChange = { url = it },
-                    label = { Text("เว็บไซต์") },
+                    label = { Text(stringResource(R.string.label_website)) },
                     placeholder = { Text("github.com") },
-                    supportingText = { Text("autofill เทียบโดเมนตรงตัว — ใส่ให้ตรงกับหน้าเข้าสู่ระบบ") },
+                    supportingText = { Text(stringResource(R.string.website_hint)) },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
                     modifier = Modifier.fillMaxWidth(),
@@ -227,8 +228,8 @@ fun ItemEditScreen(
                 OutlinedTextField(
                     value = totpSecret,
                     onValueChange = { totpSecret = it },
-                    label = { Text("ความลับ TOTP (ไม่บังคับ)") },
-                    supportingText = { Text("รหัสตั้งค่า 2FA จากเว็บไซต์ หรือลิงก์ otpauth://") },
+                    label = { Text(stringResource(R.string.label_totp_secret)) },
+                    supportingText = { Text(stringResource(R.string.totp_secret_hint)) },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, autoCorrectEnabled = false),
                     modifier = Modifier.fillMaxWidth(),
@@ -239,14 +240,14 @@ fun ItemEditScreen(
                 OutlinedTextField(
                     value = holder,
                     onValueChange = { holder = it },
-                    label = { Text("ชื่อบนบัตร") },
+                    label = { Text(stringResource(R.string.label_cardholder)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
                 OutlinedTextField(
                     value = number,
                     onValueChange = { number = it },
-                    label = { Text("เลขบัตร") },
+                    label = { Text(stringResource(R.string.label_card_number)) },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
@@ -255,7 +256,7 @@ fun ItemEditScreen(
                     OutlinedTextField(
                         value = month,
                         onValueChange = { month = it },
-                        label = { Text("เดือน") },
+                        label = { Text(stringResource(R.string.label_month)) },
                         placeholder = { Text("MM") },
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -264,7 +265,7 @@ fun ItemEditScreen(
                     OutlinedTextField(
                         value = year,
                         onValueChange = { year = it },
-                        label = { Text("ปี") },
+                        label = { Text(stringResource(R.string.label_year)) },
                         placeholder = { Text("YYYY") },
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -285,7 +286,7 @@ fun ItemEditScreen(
             OutlinedTextField(
                 value = notes,
                 onValueChange = { notes = it },
-                label = { Text(if (typeName == "secure-note") "เนื้อหา" else "โน้ต") },
+                label = { Text(stringResource(if (typeName == "secure-note") R.string.section_content else R.string.section_notes)) },
                 minLines = if (typeName == "secure-note") 6 else 3,
                 modifier = Modifier.fillMaxWidth(),
             )

@@ -79,6 +79,7 @@ android {
         versionCode = appVersionCode
         versionName = appVersionName
         resValue("string", "asset_statements", assetStatements)
+        buildConfigField("String", "WEB_ORIGIN", "\"${webOrigin.takeIf { it.startsWith("https://") || it.startsWith("http://") } ?: ""}\"")
     }
 
     signingConfigs {
@@ -166,7 +167,7 @@ tasks.matching { it.name == "preReleaseBuild" }.configureEach {
     doFirst {
         val localHosts = listOf("localhost", "127.0.0.1", "10.0.2.2")
         require(releaseApiBaseUrl.startsWith("https://") && localHosts.none { releaseApiBaseUrl.contains(it) }) {
-            "ตั้ง kunjae.releaseApiBaseUrl (https) ใน local.properties หรือ env KUNJAE_RELEASE_API_BASE_URL ก่อน build release"
+            "Set kunjae.releaseApiBaseUrl (https) in local.properties or KUNJAE_RELEASE_API_BASE_URL before building a release"
         }
     }
 }

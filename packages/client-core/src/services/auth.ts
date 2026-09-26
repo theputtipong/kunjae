@@ -50,6 +50,7 @@ import {
   type UnlockedVault,
 } from "../session/vault-session.ts";
 import {
+  accountRequired,
   fromApiError,
   invalidInput,
   malformedSecretKey,
@@ -58,6 +59,7 @@ import {
   untrustedServer,
   wrongCredentials,
   type AppResult,
+  type MessageLang,
 } from "./errors.ts";
 
 const MIN_PASSWORD_LENGTH = 12;
@@ -118,7 +120,7 @@ const deriveKeys = async (
   if (!params.ok) return params;
 
   const passwordBytes = utf8ToBytes(masterPassword);
-  if (!passwordBytes.ok) return err(invalidInput("รหัสผ่านหลัก"));
+  if (!passwordBytes.ok) return err(invalidInput("masterPassword"));
 
   try {
     const keys = await unlockAccount({
@@ -139,6 +141,7 @@ export type SignUpParams = {
   readonly email: string;
   readonly masterPassword: string;
   readonly nowMs: number;
+  readonly lang?: MessageLang;
 };
 
 export type EmergencyKit = {
@@ -148,7 +151,7 @@ export type EmergencyKit = {
 
 export const signUp = async (params: SignUpParams): Promise<AppResult<EmergencyKit>> => {
   if (params.masterPassword.length < MIN_PASSWORD_LENGTH) {
-    return err(invalidInput(`รหัสผ่านหลัก (อย่างน้อย ${String(MIN_PASSWORD_LENGTH)} ตัวอักษร)`));
+    return err(invalidInput("masterPassword", MIN_PASSWORD_LENGTH));
   }
 
   const secretKey = generateSecretKey();
@@ -176,7 +179,7 @@ export const signUp = async (params: SignUpParams): Promise<AppResult<EmergencyK
   try {
     const vault = await createVault(keys.value.wrappingKey, {
       vaultId: vaultId.value,
-      name: "ส่วนตัว",
+      name: params.lang === "th" ? "ส่วนตัว" : "Personal",
       icon: "",
       color: "",
       now: new Date(params.nowMs).toISOString(),
@@ -273,6 +276,8 @@ export const unlock = async (params: UnlockParams): Promise<AppResult<void>> => 
 };
 
 export const refreshToken = async (): Promise<AppResult<void>> => {
+  if (getSessionView().mode === "local") return err(accountRequired());
+
   const email = getSessionEmail();
   if (email === null) return err(wrongCredentials());
 
@@ -293,6 +298,8 @@ export const refreshToken = async (): Promise<AppResult<void>> => {
 const getSessionAccountId = (): string | null => getSessionView().accountId;
 
 export const ensureToken = async (nowMs: number): Promise<AppResult<string>> => {
+  if (getSessionView().mode === "local") return err(accountRequired());
+
   const current = getUsableToken(nowMs);
   if (current !== null) return ok(current);
 
@@ -354,7 +361,7 @@ export const changeMasterPassword = async (
   params: ChangePasswordParams,
 ): Promise<AppResult<void>> => {
   if (params.newMasterPassword.length < MIN_PASSWORD_LENGTH) {
-    return err(invalidInput(`รหัสผ่านใหม่ (อย่างน้อย ${String(MIN_PASSWORD_LENGTH)} ตัวอักษร)`));
+    return err(invalidInput("newMasterPassword", MIN_PASSWORD_LENGTH));
   }
 
   const email = getSessionEmail();

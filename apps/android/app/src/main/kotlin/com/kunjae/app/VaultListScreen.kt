@@ -1,5 +1,8 @@
 package com.kunjae.app
 
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.platform.LocalContext
+import android.content.Context
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -47,11 +50,17 @@ import com.kunjae.app.ui.LetterAvatar
 import com.kunjae.app.ui.MessageBanner
 import com.kunjae.app.ui.iconForType
 
-val ITEM_TYPE_CHOICES = listOf(
-    "login" to "เข้าสู่ระบบ",
-    "secure-note" to "โน้ตลับ",
-    "card" to "บัตร",
+val ITEM_TYPE_CHOICES: List<Pair<String, Int>> = listOf(
+    "login" to R.string.type_login,
+    "secure-note" to R.string.type_secure_note,
+    "card" to R.string.type_card,
 )
+
+fun subtitleFor(row: VaultViewModel.ItemRow, context: Context): String = when (row.typeName) {
+    "secure-note" -> context.getString(R.string.type_secure_note)
+    "card" -> context.getString(R.string.card_subtitle, row.subtitle)
+    else -> row.subtitle
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -61,7 +70,9 @@ fun VaultListScreen(
     onOpen: (String) -> Unit,
     onAdd: () -> Unit,
     onSettings: () -> Unit,
+    onSignInToSync: () -> Unit,
 ) {
+    val local = state.mode == VaultViewModel.Mode.LOCAL
     var query by rememberSaveable { mutableStateOf("") }
     var typeFilter by rememberSaveable { mutableStateOf<String?>(null) }
 
@@ -70,29 +81,35 @@ fun VaultListScreen(
             TopAppBar(
                 title = {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        KunjaeMark(36.dp, unlocked = true, description = "Kunjae — ปลดล็อกอยู่")
+                        KunjaeMark(36.dp, unlocked = true, description = stringResource(R.string.cd_unlocked))
                         Column {
                         Text("Kunjae", fontWeight = FontWeight.SemiBold)
-                        Text(
-                            state.email,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
+                        if (local) {
+                            LocalChip()
+                        } else {
+                            Text(
+                                state.email,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
                         }
                     }
                 },
                 actions = {
-                    IconButton(onClick = model::sync, enabled = !state.busy) { Icon(KIcons.Sync, "ดึงข้อมูลใหม่") }
-                    IconButton(onClick = onSettings) { Icon(KIcons.Settings, "ตั้งค่า") }
-                    IconButton(onClick = model::lock) { Icon(KIcons.Lock, "ล็อก") }
+                    if (!local) {
+                        IconButton(onClick = model::sync, enabled = !state.busy) { Icon(KIcons.Sync, stringResource(R.string.cd_sync)) }
+                    }
+                    IconButton(onClick = onSettings) { Icon(KIcons.Settings, stringResource(R.string.cd_settings)) }
+                    IconButton(onClick = model::lock) { Icon(KIcons.Lock, stringResource(R.string.cd_lock)) }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface),
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = onAdd, containerColor = KunjaeYellow, contentColor = OnKunjaeYellow) { Icon(KIcons.Add, "เพิ่มรายการ") }
+            FloatingActionButton(onClick = onAdd, containerColor = KunjaeYellow, contentColor = OnKunjaeYellow) { Icon(KIcons.Add, stringResource(R.string.cd_add_item)) }
         },
     ) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
@@ -105,17 +122,19 @@ fun VaultListScreen(
                 OutlinedTextField(
                     value = query,
                     onValueChange = { query = it },
-                    placeholder = { Text("ค้นหาในคลังข้อมูล") },
+                    placeholder = { Text(stringResource(R.string.search_placeholder)) },
                     leadingIcon = { Icon(KIcons.Search, contentDescription = null) },
                     trailingIcon = {
-                        if (query.isNotEmpty()) IconButton(onClick = { query = "" }) { Icon(KIcons.Close, "ล้าง") }
+                        if (query.isNotEmpty()) IconButton(onClick = { query = "" }) { Icon(KIcons.Close, stringResource(R.string.cd_clear)) }
                     },
                     singleLine = true,
                     shape = MaterialTheme.shapes.extraLarge,
                     modifier = Modifier.fillMaxWidth(),
                 )
 
-                MessageBanner(state.message, onDismiss = model::dismissMessage)
+                MessageBanner(state.message.asString(), onDismiss = model::dismissMessage)
+
+                if (local) LocalModeBanner(onSignIn = onSignInToSync)
             }
 
             LazyRow(
@@ -123,24 +142,25 @@ fun VaultListScreen(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 item {
-                    FilterChip(selected = typeFilter == null, onClick = { typeFilter = null }, label = { Text("ทั้งหมด") })
+                    FilterChip(selected = typeFilter == null, onClick = { typeFilter = null }, label = { Text(stringResource(R.string.filter_all)) })
                 }
                 items(ITEM_TYPE_CHOICES) { (name, label) ->
                     FilterChip(
                         selected = typeFilter == name,
                         onClick = { typeFilter = if (typeFilter == name) null else name },
-                        label = { Text(label) },
+                        label = { Text(stringResource(label)) },
                         leadingIcon = { Icon(iconForType(name), contentDescription = null, modifier = Modifier.size(18.dp)) },
                     )
                 }
                 if (state.vaults.size > 1) item { VaultPicker(state, model) }
             }
 
+            val context = LocalContext.current
             val needle = query.trim().lowercase()
             val visible = state.items
                 .filter { state.activeVaultId == null || it.vaultId == state.activeVaultId }
                 .filter { typeFilter == null || it.typeName == typeFilter }
-                .filter { needle.isEmpty() || it.title.lowercase().contains(needle) || it.subtitle.lowercase().contains(needle) }
+                .filter { needle.isEmpty() || it.title.lowercase().contains(needle) || subtitleFor(it, context).lowercase().contains(needle) }
 
             if (visible.isEmpty()) {
                 EmptyState(filtered = state.items.isNotEmpty(), onAdd = onAdd)
@@ -168,6 +188,7 @@ private fun ItemListRow(row: VaultViewModel.ItemRow, onClick: () -> Unit) {
         LetterAvatar(row.title)
         Column(modifier = Modifier.weight(1f)) {
             Text(row.title, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            val context = LocalContext.current
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 Icon(
                     iconForType(row.typeName),
@@ -176,7 +197,7 @@ private fun ItemListRow(row: VaultViewModel.ItemRow, onClick: () -> Unit) {
                     modifier = Modifier.size(14.dp),
                 )
                 Text(
-                    row.subtitle,
+                    subtitleFor(row, context),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
@@ -207,12 +228,12 @@ private fun VaultPicker(state: VaultViewModel.UiState, model: VaultViewModel) {
         FilterChip(
             selected = state.activeVaultId != null,
             onClick = { open = true },
-            label = { Text(activeName ?: "ทุก vault") },
+            label = { Text(activeName ?: stringResource(R.string.all_vaults)) },
             leadingIcon = { Icon(KIcons.Folder, contentDescription = null, modifier = Modifier.size(18.dp)) },
             trailingIcon = { Icon(KIcons.DropDown, contentDescription = null, modifier = Modifier.size(18.dp)) },
         )
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
-            DropdownMenuItem(text = { Text("ทุก vault") }, onClick = {
+            DropdownMenuItem(text = { Text(stringResource(R.string.all_vaults)) }, onClick = {
                 model.selectVault(null)
                 open = false
             })
@@ -235,12 +256,12 @@ private fun EmptyState(filtered: Boolean, onAdd: () -> Unit) {
     ) {
         Text(if (filtered) "🔍" else "🗝️", style = MaterialTheme.typography.displaySmall)
         Text(
-            if (filtered) "ไม่พบรายการที่ตรงกัน" else "ยังไม่มีรายการ",
+            stringResource(if (filtered) R.string.empty_filtered_title else R.string.empty_title),
             style = MaterialTheme.typography.titleMedium,
             modifier = Modifier.padding(top = 12.dp),
         )
         Text(
-            if (filtered) "ลองเปลี่ยนคำค้นหาหรือตัวกรอง" else "กดปุ่ม + เพื่อเพิ่มรหัสผ่าน โน้ตลับ หรือบัตรรายการแรก",
+            stringResource(if (filtered) R.string.empty_filtered_body else R.string.empty_body),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(top = 4.dp).clickable(enabled = !filtered, onClick = onAdd),

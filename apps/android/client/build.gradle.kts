@@ -32,3 +32,13 @@ val verifyAutofill by tasks.registering(JavaExec::class) {
 }
 
 tasks.named("check") { dependsOn(verifyAutofill) }
+
+val verifyLocalVault by tasks.registering(JavaExec::class) {
+    group = "verification"
+    description = "ตรวจว่า vault บนเครื่องนี้เข้ารหัส เปิด เปลี่ยนรหัสผ่าน และลบได้ถูกต้อง"
+
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.kunjae.client.VerifyLocalVaultKt")
+}
+
+tasks.named("check") { dependsOn(verifyLocalVault) }

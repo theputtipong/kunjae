@@ -14,8 +14,10 @@ import javax.crypto.spec.GCMParameterSpec
 
 object BiometricVault {
 
-    private const val KEY_ALIAS = "kunjae.session.v1"
-    private const val FILE_NAME = "kunjae.session.v1.bin"
+    enum class Slot(val keyAlias: String, val fileName: String) {
+        ACCOUNT("kunjae.session.v1", "kunjae.session.v1.bin"),
+        LOCAL("kunjae.local.session.v1", "kunjae.local.session.v1.bin"),
+    }
 
     private const val KEYSTORE = "AndroidKeyStore"
     private const val TRANSFORMATION = "AES/GCM/NoPadding"
@@ -36,21 +38,28 @@ object BiometricVault {
         }
     }
 
-    fun hasRemembered(context: Context): Boolean = file(context).exists()
+    fun hasRemembered(context: Context, slot: Slot = Slot.ACCOUNT): Boolean = file(context, slot).exists()
 
-    fun forget(context: Context) {
-        file(context).delete()
+    fun forget(context: Context, slot: Slot = Slot.ACCOUNT) {
+        file(context, slot).delete()
         runCatching {
-            keyStore().deleteEntry(KEY_ALIAS)
+            keyStore().deleteEntry(slot.keyAlias)
         }
     }
 
-    fun beginRemember(context: Context): Cipher? = runCatching {
-        forget(context)
+    fun beginRemember(context: Context, slot: Slot = Slot.ACCOUNT): Cipher? = runCatching {
+        forget(context, slot)
         val cipher = Cipher.getInstance(TRANSFORMATION)
-        cipher.init(Cipher.ENCRYPT_MODE, createKey(context))
+        cipher.init(Cipher.ENCRYPT_MODE, createKey(context, slot))
         cipher
     }.getOrNull()
+
+    fun finishRememberLocal(
+        context: Context,
+        cipher: Cipher,
+        wrappingKey: ByteArray,
+        nowMs: Long = System.currentTimeMillis(),
+    ): Boolean = seal(context, cipher, Slot.LOCAL, encodePayload("", ByteArray(KEY_BYTES), wrappingKey, nowMs))
 
     fun finishRemember(
         context: Context,
@@ -59,9 +68,9 @@ object BiometricVault {
         authKey: ByteArray,
         wrappingKey: ByteArray,
         nowMs: Long = System.currentTimeMillis(),
-    ): Boolean = runCatching {
-        val payload = encodePayload(email, authKey, wrappingKey, nowMs)
+    ): Boolean = seal(context, cipher, Slot.ACCOUNT, encodePayload(email, authKey, wrappingKey, nowMs))
 
+    private fun seal(context: Context, cipher: Cipher, slot: Slot, payload: ByteArray): Boolean = runCatching {
         val sealed = try {
             cipher.doFinal(payload)
         } finally {
@@ -69,23 +78,23 @@ object BiometricVault {
         }
 
         val nonce = cipher.iv
-        require(nonce.size == NONCE_BYTES) { "ขนาด nonce ไม่ตรงกับที่ออกแบบไว้" }
+        require(nonce.size == NONCE_BYTES) { "Unexpected nonce size" }
 
-        val temp = File(file(context).parentFile, "$FILE_NAME.tmp")
+        val temp = File(file(context, slot).parentFile, "${slot.fileName}.tmp")
         temp.writeBytes(nonce + sealed)
-        temp.renameTo(file(context))
+        temp.renameTo(file(context, slot))
     }.getOrDefault(false)
 
-    fun beginRecall(context: Context): Cipher? {
-        val stored = runCatching { file(context).readBytes() }.getOrNull() ?: return null
+    fun beginRecall(context: Context, slot: Slot = Slot.ACCOUNT): Cipher? {
+        val stored = runCatching { file(context, slot).readBytes() }.getOrNull() ?: return null
         if (stored.size <= NONCE_BYTES) {
-            forget(context)
+            forget(context, slot)
             return null
         }
 
-        val key = runCatching { existingKey() }.getOrNull()
+        val key = runCatching { existingKey(slot) }.getOrNull()
         if (key == null) {
-            forget(context)
+            forget(context, slot)
             return null
         }
 
@@ -98,7 +107,7 @@ object BiometricVault {
             )
             cipher
         }.getOrElse {
-            forget(context)
+            forget(context, slot)
             null
         }
     }
@@ -106,16 +115,17 @@ object BiometricVault {
     fun finishRecall(
         context: Context,
         cipher: Cipher,
+        slot: Slot = Slot.ACCOUNT,
         nowMs: Long = System.currentTimeMillis(),
     ): Remembered? {
-        val stored = runCatching { file(context).readBytes() }.getOrNull() ?: return null
+        val stored = runCatching { file(context, slot).readBytes() }.getOrNull() ?: return null
 
         val opened = runCatching {
             cipher.doFinal(stored, NONCE_BYTES, stored.size - NONCE_BYTES)
         }.getOrNull()
 
         if (opened == null) {
-            forget(context)
+            forget(context, slot)
             return null
         }
 
@@ -123,7 +133,7 @@ object BiometricVault {
             val parsed = decodePayload(opened)
             if (parsed == null || nowMs - parsed.second > MAX_AGE_MS) {
                 parsed?.first?.wipe()
-                forget(context)
+                forget(context, slot)
                 return null
             }
             return parsed.first
@@ -142,7 +152,7 @@ object BiometricVault {
         nowMs: Long,
     ): ByteArray {
         require(authKey.size == KEY_BYTES && wrappingKey.size == KEY_BYTES) {
-            "ขนาดกุญแจไม่ตรงกับที่ออกแบบไว้"
+            "Unexpected key size"
         }
 
         val emailBytes = email.toByteArray(Charsets.UTF_8)
@@ -173,26 +183,26 @@ object BiometricVault {
         ) to savedAtMs
     }
 
-    private fun file(context: Context): File = File(context.filesDir, FILE_NAME)
+    private fun file(context: Context, slot: Slot): File = File(context.filesDir, slot.fileName)
 
     private fun keyStore(): KeyStore = KeyStore.getInstance(KEYSTORE).apply { load(null) }
 
-    private fun existingKey(): SecretKey? = keyStore().getKey(KEY_ALIAS, null) as? SecretKey
+    private fun existingKey(slot: Slot): SecretKey? = keyStore().getKey(slot.keyAlias, null) as? SecretKey
 
-    private fun createKey(context: Context): SecretKey {
+    private fun createKey(context: Context, slot: Slot): SecretKey {
         val hasStrongBox = context.packageManager
             .hasSystemFeature(android.content.pm.PackageManager.FEATURE_STRONGBOX_KEYSTORE)
 
         return try {
-            generate(strongBox = hasStrongBox)
+            generate(slot, strongBox = hasStrongBox)
         } catch (_: StrongBoxUnavailableException) {
-            generate(strongBox = false)
+            generate(slot, strongBox = false)
         }
     }
 
-    private fun generate(strongBox: Boolean): SecretKey {
+    private fun generate(slot: Slot, strongBox: Boolean): SecretKey {
         val builder = KeyGenParameterSpec.Builder(
-            KEY_ALIAS,
+            slot.keyAlias,
             KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT,
         )
             .setBlockModes(KeyProperties.BLOCK_MODE_GCM)

@@ -47,7 +47,7 @@ fun signUp(
     api: ApiClient,
     email: String,
     masterPassword: String,
-    vaultName: String = "ส่วนตัว",
+    vaultName: String = "Personal",
     nowMs: Long = System.currentTimeMillis(),
 ): CryptoResult<EmergencyKit> {
     if (masterPassword.length < MIN_PASSWORD_LENGTH) return err(CryptoFailure.INVALID_PARAMETER)

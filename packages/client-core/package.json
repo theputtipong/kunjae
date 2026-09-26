@@ -3,20 +3,16 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "ตรรกะฝั่งผู้ใช้ที่ทุกแพลตฟอร์มใช้ร่วมกัน — กุญแจ, การติดต่อ API และการซิงค์ (ไม่มี UI)",
+  "description": "Shared client logic for key handling, API access and sync",
   "license": "MIT",
-
   "sideEffects": false,
-
   "exports": {
     ".": "./src/index.ts"
   },
-
   "scripts": {
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf .turbo node_modules *.tsbuildinfo"
   },
-
   "dependencies": {
     "@kunjae/contracts": "workspace:*",
     "@kunjae/core-crypto": "workspace:*",

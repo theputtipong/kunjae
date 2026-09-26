@@ -1,5 +1,6 @@
 package com.kunjae.app
 
+import android.content.Context
 import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
@@ -18,6 +19,10 @@ class OtpFillActivity : Activity() {
         const val EXTRA_ITEM_ID: String = "com.kunjae.app.ITEM_ID"
 
         const val EXTRA_FIELD_ID: String = "com.kunjae.app.FIELD_ID"
+    }
+
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(AppLocale.wrap(newBase))
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {

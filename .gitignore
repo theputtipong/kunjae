@@ -44,3 +44,4 @@ CLAUDE.md
 .kunjae-signing/
 *production-secrets*.json
 .wrangler.deploy.json
+worker-configuration.d.ts

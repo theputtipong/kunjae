@@ -38,7 +38,7 @@ object BiometricGate {
         val builder = BiometricPrompt.Builder(activity)
             .setTitle(title)
             .setSubtitle(subtitle)
-            .setNegativeButton("ยกเลิก", executor) { _, _ -> }
+            .setNegativeButton(activity.getString(R.string.action_cancel), executor) { _, _ -> }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             builder.setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_STRONG)
@@ -49,7 +49,7 @@ object BiometricGate {
             override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
                 val approved = result.cryptoObject?.cipher
                 onResult(
-                    if (approved == null) Outcome.Refused("ระบบไม่ได้คืนกุญแจที่ยืนยันแล้ว")
+                    if (approved == null) Outcome.Refused("The system did not return the authenticated key")
                     else Outcome.Approved(approved),
                 )
             }

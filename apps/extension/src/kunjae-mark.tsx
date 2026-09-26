@@ -1,6 +1,5 @@
 const INK = "#0E131B";
 const BRASS_LIGHT = "#E3B35C";
-const BRASS_DEEP = "#8E5F14";
 
 const FullShapes = ({ color }: { readonly color: string }) => (
   <>
@@ -29,7 +28,7 @@ export type KunjaeMarkProps = {
 
 export const KunjaeMark = ({ size, unlocked = false, tile = true, label }: KunjaeMarkProps) => {
   const markPx = tile ? size * 0.61 : size;
-  const color = tile ? BRASS_LIGHT : BRASS_DEEP;
+  const color = tile ? BRASS_LIGHT : "currentColor";
   const shapes = markPx < 24 ? <SmallShapes color={color} /> : <FullShapes color={color} />;
 
   return (
@@ -40,7 +39,7 @@ export const KunjaeMark = ({ size, unlocked = false, tile = true, label }: Kunja
       role={label === undefined ? undefined : "img"}
       aria-label={label}
       aria-hidden={label === undefined ? true : undefined}
-      className="shrink-0"
+      className={tile ? "shrink-0" : "shrink-0 text-brand-700"}
     >
       {tile && <rect width="104" height="104" rx="23.3" fill={INK} />}
       <g transform={tile ? "translate(20 20)" : undefined}>

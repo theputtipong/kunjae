@@ -1,7 +1,8 @@
 import { createVault as createVaultContent } from "@kunjae/domain";
 
 import { apiCreateVault } from "../api/client.ts";
-import { addUnlockedVault, withWrappingKey } from "../session/vault-session.ts";
+import { addUnlockedVault, isLocalSession, withWrappingKey } from "../session/vault-session.ts";
+import { createLocalVaultEntry } from "../local/local-store.ts";
 import { createUlid } from "../lib/ulid.ts";
 import { upsertVault } from "../store/vault-store.ts";
 import { ensureToken } from "./auth.ts";
@@ -20,6 +21,8 @@ export type CreateVaultParams = {
 };
 
 export const createNewVault = async (params: CreateVaultParams): Promise<AppResult<string>> => {
+  if (isLocalSession()) return createLocalVaultEntry(params);
+
   const token = await ensureToken(params.nowMs);
   if (!token.ok) return token;
 

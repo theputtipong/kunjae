@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "Kunjae web app — ทุกการเข้ารหัสเกิดขึ้นในเบราว์เซอร์ของผู้ใช้เท่านั้น",
+  "description": "Kunjae web app",
   "license": "MIT",
   "scripts": {
     "dev": "vite",

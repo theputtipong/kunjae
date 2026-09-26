@@ -1,14 +1,18 @@
-import { wipeAccountKeys, type AccountKeys, type WrappingKey } from "@kunjae/core-crypto";
+import { wipe, wipeAccountKeys, type AccountKeys, type WrappingKey } from "@kunjae/core-crypto";
 
 export type UnlockedVault = {
   readonly vaultId: string;
   readonly key: CryptoKey;
 };
 
+export type SessionMode = "account" | "local";
+
 type SessionState = {
-  readonly accountId: string;
-  readonly email: string;
-  readonly accountKeys: AccountKeys;
+  readonly mode: SessionMode;
+  readonly accountId: string | null;
+  readonly email: string | null;
+  readonly accountKeys: AccountKeys | null;
+  localWrappingKey: WrappingKey | null;
   readonly vaults: Map<string, UnlockedVault>;
   token: string;
   tokenExpiresAtMs: number;
@@ -30,6 +34,7 @@ export const subscribeToSession = (listener: () => void): (() => void) => {
 
 export type SessionView = {
   readonly status: "locked" | "unlocked";
+  readonly mode: SessionMode | null;
   readonly accountId: string | null;
   readonly email: string | null;
   readonly vaultIds: readonly string[];
@@ -37,6 +42,7 @@ export type SessionView = {
 
 const LOCKED_VIEW: SessionView = {
   status: "locked",
+  mode: null,
   accountId: null,
   email: null,
   vaultIds: [],
@@ -50,6 +56,7 @@ const rebuildView = (): void => {
       ? LOCKED_VIEW
       : {
           status: "unlocked",
+          mode: session.mode,
           accountId: session.accountId,
           email: session.email,
           vaultIds: [...session.vaults.keys()],
@@ -57,6 +64,10 @@ const rebuildView = (): void => {
 };
 
 export const getSessionView = (): SessionView => cachedView;
+
+export const getSessionMode = (): SessionMode | null => session?.mode ?? null;
+
+export const isLocalSession = (): boolean => session?.mode === "local";
 
 export type OpenSessionParams = {
   readonly accountId: string;
@@ -72,9 +83,11 @@ export const openSession = (params: OpenSessionParams): void => {
   lockSession();
 
   session = {
+    mode: "account",
     accountId: params.accountId,
     email: params.email,
     accountKeys: params.accountKeys,
+    localWrappingKey: null,
     vaults: new Map(params.vaults.map((vault) => [vault.vaultId, vault])),
     token: params.token,
     tokenExpiresAtMs: params.tokenExpiresAtMs,
@@ -85,10 +98,45 @@ export const openSession = (params: OpenSessionParams): void => {
   notify();
 };
 
+export type OpenLocalSessionParams = {
+  readonly wrappingKey: WrappingKey;
+  readonly vaults: readonly UnlockedVault[];
+  readonly nowMs: number;
+};
+
+export const openLocalSession = (params: OpenLocalSessionParams): void => {
+  lockSession();
+
+  session = {
+    mode: "local",
+    accountId: null,
+    email: null,
+    accountKeys: null,
+    localWrappingKey: params.wrappingKey,
+    vaults: new Map(params.vaults.map((vault) => [vault.vaultId, vault])),
+    token: "",
+    tokenExpiresAtMs: 0,
+    lastActivityMs: params.nowMs,
+  };
+
+  rebuildView();
+  notify();
+};
+
+export const replaceLocalWrappingKey = (wrappingKey: WrappingKey): boolean => {
+  if (session?.mode !== "local" || session.localWrappingKey === null) return false;
+
+  wipe(session.localWrappingKey);
+  session.localWrappingKey = wrappingKey;
+  return true;
+};
+
 export const lockSession = (): void => {
   if (session === null) return;
 
-  wipeAccountKeys(session.accountKeys);
+  if (session.accountKeys !== null) wipeAccountKeys(session.accountKeys);
+  if (session.localWrappingKey !== null) wipe(session.localWrappingKey);
+  session.localWrappingKey = null;
 
   session.token = "";
 
@@ -112,10 +160,12 @@ export const withVaultKey = async <T>(
 export const withWrappingKey = async <T>(
   borrow: (key: WrappingKey) => Promise<T>,
 ): Promise<T | null> => {
-  const keys = session?.accountKeys;
-  if (keys === undefined) return null;
+  if (session === null) return null;
 
-  return borrow(keys.wrappingKey);
+  const key = session.mode === "local" ? session.localWrappingKey : session.accountKeys?.wrappingKey;
+  if (key === null || key === undefined) return null;
+
+  return borrow(key);
 };
 
 export const addUnlockedVault = (vault: UnlockedVault): void => {
@@ -129,17 +179,17 @@ export const addUnlockedVault = (vault: UnlockedVault): void => {
 const TOKEN_EXPIRY_MARGIN_MS = 30_000;
 
 export const getUsableToken = (nowMs: number): string | null => {
-  if (session === null) return null;
+  if (session?.mode !== "account") return null;
   if (session.tokenExpiresAtMs - TOKEN_EXPIRY_MARGIN_MS <= nowMs) return null;
 
   return session.token;
 };
 
 export const needsTokenRefresh = (nowMs: number): boolean =>
-  session !== null && getUsableToken(nowMs) === null;
+  session?.mode === "account" && getUsableToken(nowMs) === null;
 
 export const replaceToken = (token: string, expiresAtMs: number): void => {
-  if (session === null) return;
+  if (session?.mode !== "account") return;
 
   session.token = token;
   session.tokenExpiresAtMs = expiresAtMs;
@@ -149,7 +199,7 @@ export const withAuthKey = async <T>(
   borrow: (authKey: AccountKeys["authKey"]) => Promise<T>,
 ): Promise<T | null> => {
   const keys = session?.accountKeys;
-  if (keys === undefined) return null;
+  if (keys === undefined || keys === null) return null;
 
   return borrow(keys.authKey);
 };
