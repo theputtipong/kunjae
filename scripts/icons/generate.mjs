@@ -14,7 +14,7 @@ const loadSharp = () => {
   } catch {
     const store = join(root, "node_modules", ".pnpm");
     const dir = readdirSync(store).find((name) => name.startsWith("sharp@"));
-    if (dir === undefined) throw new Error("ไม่พบ sharp — ดูวิธีแก้ที่หัวไฟล์");
+    if (dir === undefined) throw new Error("ไม่พบ sharp — รัน pnpm install ที่รากของ repo ก่อน");
     return require(join(store, dir, "node_modules", "sharp"));
   }
 };

@@ -92,6 +92,10 @@ jobs:
         working-directory: apps/android
         run: ./gradlew verifyAutofill --no-daemon
 
+      - name: vault บนเครื่อง (เข้ารหัส เปิด เปลี่ยนรหัสผ่าน ลบ)
+        working-directory: apps/android
+        run: ./gradlew verifyLocalVault --no-daemon
+
       - name: build Android เวอร์ชันจริง (ไม่ลงนาม) — ให้ R8 ทำงานจริง
         working-directory: apps/android
         env:
