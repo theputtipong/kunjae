@@ -95,6 +95,7 @@ jobs:
           VITE_API_BASE_URL: ${{ vars.API_BASE_URL }}
           VITE_PLAY_STORE_URL: ${{ vars.PLAY_STORE_URL }}
           VITE_CHROME_WEB_STORE_URL: ${{ vars.CHROME_WEB_STORE_URL }}
+          VITE_PLAY_SIGNING_CERT_SHA256: ${{ vars.PLAY_SIGNING_CERT_SHA256 }}
         run: |
           set -euo pipefail
           test -n "${VITE_API_BASE_URL}" || { echo "::error::ยังไม่ได้ตั้งตัวแปร API_BASE_URL"; exit 1; }

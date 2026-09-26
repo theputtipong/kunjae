@@ -1,15 +1,19 @@
 import { z } from "zod";
 import {
-  AccountSaltSchema,
   Argon2ParamsSchema,
   EnvelopeSchema,
   IsoDateTimeSchema,
   ItemVersionSchema,
   SYNC_LIMITS,
   UlidSchema,
+  base64UrlBytes,
 } from "@kunjae/contracts";
 
 export const LOCAL_RECORD_FORMAT = "kunjae.local.v1";
+
+export const LOCAL_SALT_BYTES = 32;
+
+const LocalSaltSchema = base64UrlBytes(LOCAL_SALT_BYTES, LOCAL_SALT_BYTES);
 
 export const LOCAL_LIMITS = {
   vaults: SYNC_LIMITS.vaultsPerAccount,
@@ -33,7 +37,7 @@ export const LocalItemEntrySchema = z.strictObject({
 export const LocalRecordSchema = z
   .strictObject({
     format: z.literal(LOCAL_RECORD_FORMAT),
-    salt: AccountSaltSchema,
+    salt: LocalSaltSchema,
     argon2: Argon2ParamsSchema,
     createdAt: IsoDateTimeSchema,
     vaults: z.array(LocalVaultEntrySchema).min(1).max(LOCAL_LIMITS.vaults),

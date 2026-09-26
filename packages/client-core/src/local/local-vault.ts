@@ -333,13 +333,13 @@ export const migrateLocalToAccount = (params: MigrateLocalParams): Promise<AppRe
     const opened = await openLocalItems(vaults.value, record);
 
     const items: DecryptedItem[] = [];
+    let failed = 0;
     for (const { result } of opened) {
-      if (result?.ok !== true) return err(localVaultCorrupt());
-      items.push(result.value);
+      if (result?.ok === true) items.push(result.value);
+      else failed += 1;
     }
 
     const movedIds = new Set<string>();
-    let failed = 0;
 
     for (const [index, item] of items.entries()) {
       const newId = createUlid(params.nowMs + index);

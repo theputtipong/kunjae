@@ -89,6 +89,17 @@ jobs:
           echo "firebase=$([ -n "${FIREBASE_APP_ID}" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
           echo "play=$([ -n "${PLAY_JSON}" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
 
+      - name: ใบรับรองของ Play App Signing
+        if: startsWith(github.ref, 'refs/tags/android-v') && steps.channels.outputs.play == 'true'
+        env:
+          PLAY_CERT: ${{ vars.PLAY_SIGNING_CERT_SHA256 }}
+        run: |
+          CLEAN=$(printf '%s' "${PLAY_CERT}" | tr -cd '0-9A-Fa-f,' | tr 'a-f' 'A-F')
+          test -n "${CLEAN}" || { echo "::error::ตั้ง vars.PLAY_SIGNING_CERT_SHA256 ก่อนส่งขึ้น Play ไม่อย่างนั้นแอปที่ Play ลงนามจะเปิดหน้าจอ tamper"; exit 1; }
+          for CERT in ${CLEAN//,/ }; do
+            test "${#CERT}" -eq 64 || { echo "::error::PLAY_SIGNING_CERT_SHA256 ต้องเป็น SHA-256 (64 hex)"; exit 1; }
+          done
+
       - name: mapping ของ R8 (90 วัน)
         uses: actions/upload-artifact@v4
         with:

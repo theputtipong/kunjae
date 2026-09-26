@@ -75,7 +75,7 @@ object IntegrityGuard {
         val threads = runCatching {
             File("/proc/self/task").listFiles().orEmpty().any { task ->
                 runCatching { File(task, "comm").readText().trim() }.getOrDefault("").let { name ->
-                    name.startsWith("gum-js") || name.startsWith("gmain") || name == "gdbus" || name.startsWith("frida")
+                    name.startsWith("gum-js") || name.startsWith("frida") || name.startsWith("pool-frida")
                 }
             }
         }.getOrDefault(false)
