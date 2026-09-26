@@ -42,6 +42,14 @@ export const en = {
     dark: "Dark",
     toggle: (current: string, next: string) => `Theme: ${current}. Switch to ${next}`,
   },
+  legal: {
+    privacy: "Privacy Policy",
+    terms: "Terms of Use",
+    updated: (date: string) => `Last updated ${date}`,
+    agreeBefore: "By continuing you agree to the ",
+    agreeAnd: " and acknowledge the ",
+    agreeAfter: ". You must be 13 or older; under 20 needs a parent's or guardian's consent.",
+  },
   footer: {
     encrypted: "Your data is always encrypted in this browser before it leaves your device.",
     support: "Support Kunjae ☕ Buy me a coffee",

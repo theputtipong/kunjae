@@ -9,6 +9,7 @@ import { InstallPrompt } from "../ui/install-prompt.tsx";
 import { clearStore } from "@kunjae/client-core";
 import { useT } from "../i18n/index.ts";
 import { LanguageToggle, SupportLink, ThemeToggle } from "../ui/preferences.tsx";
+import { LegalLinks } from "./legal.tsx";
 
 export const RootLayout = () => {
   const session = useSession();
@@ -84,6 +85,9 @@ export const RootLayout = () => {
         <p>{t.footer.encrypted}</p>
         <p>
           <SupportLink />
+        </p>
+        <p>
+          <LegalLinks />
         </p>
       </footer>
     </div>

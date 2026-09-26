@@ -224,6 +224,21 @@ fun SettingsScreen(
                     },
                 )
             }
+
+            SectionCard(title = stringResource(R.string.section_legal)) {
+                SettingsRow(
+                    KIcons.Shield,
+                    stringResource(R.string.legal_privacy),
+                    onClick = { openLegalPage(activity, LegalPage.PRIVACY) },
+                    trailing = { Icon(KIcons.ChevronRight, contentDescription = null) },
+                )
+                SettingsRow(
+                    KIcons.Note,
+                    stringResource(R.string.legal_terms),
+                    onClick = { openLegalPage(activity, LegalPage.TERMS) },
+                    trailing = { Icon(KIcons.ChevronRight, contentDescription = null) },
+                )
+            }
         }
     }
 

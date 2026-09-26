@@ -199,6 +199,8 @@ fun StartScreen(onStartLocal: () -> Unit, onSignIn: () -> Unit, onHelp: () -> Un
         TextButton(onClick = onHelp, modifier = Modifier.align(Alignment.CenterHorizontally)) {
             Text(stringResource(R.string.how_it_works))
         }
+
+        AgreementNote()
     }
 }
 

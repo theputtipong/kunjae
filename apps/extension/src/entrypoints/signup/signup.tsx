@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 
 import { send } from "../../send.ts";
 import { describeError, dictionary } from "../../i18n.ts";
+import { webOrigin } from "../../config.ts";
 
 const t = dictionary();
 
@@ -173,6 +174,17 @@ export const SignUpPage = () => {
       >
         {busy ? t.creatingKey : t.signUp}
       </button>
+
+      <p className="text-xs text-stone-500">
+        {t.legalAgreement}{" "}
+        <a href={`${webOrigin()}/terms`} target="_blank" rel="noopener noreferrer" className="font-medium text-brand-700 underline">
+          {t.legalTerms}
+        </a>
+        {" · "}
+        <a href={`${webOrigin()}/privacy`} target="_blank" rel="noopener noreferrer" className="font-medium text-brand-700 underline">
+          {t.legalPrivacy}
+        </a>
+      </p>
     </div>
   );
 };

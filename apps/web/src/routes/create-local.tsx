@@ -5,6 +5,7 @@ import { createLocalVault, errorMessage } from "@kunjae/client-core";
 import { Button, Callout, Card, Field } from "../ui/primitives.tsx";
 import { useLang, useT } from "../i18n/index.ts";
 import { refreshLocalPresence, useLocalPresence } from "../session/local-presence.ts";
+import { AgreementNote } from "./legal.tsx";
 
 export const CreateLocalPage = () => {
   const navigate = useNavigate();
@@ -104,6 +105,8 @@ export const CreateLocalPage = () => {
           </label>
 
           {error !== null && <Callout tone="danger">{error}</Callout>}
+
+          <AgreementNote />
 
           <Button type="submit" disabled={busy || !acknowledged}>
             {busy ? t.local.createBusy : t.local.createSubmit}

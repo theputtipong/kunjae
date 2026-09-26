@@ -15,6 +15,7 @@ import { StartPage } from "./routes/start.tsx";
 import { CreateLocalPage } from "./routes/create-local.tsx";
 import { VaultPage } from "./routes/vault.tsx";
 import { WelcomePage } from "./routes/welcome.tsx";
+import { PrivacyPage, TermsPage } from "./routes/legal.tsx";
 import { onboardingSeen } from "./session/onboarding.ts";
 import { getLocalPresence } from "./session/local-presence.ts";
 
@@ -88,7 +89,21 @@ const settingsRoute = createRoute({
   beforeLoad: requireUnlocked,
 });
 
+const privacyRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/privacy",
+  component: PrivacyPage,
+});
+
+const termsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/terms",
+  component: TermsPage,
+});
+
 export const routeTree = rootRoute.addChildren([
+  privacyRoute,
+  termsRoute,
   startRoute,
   welcomeRoute,
   unlockRoute,

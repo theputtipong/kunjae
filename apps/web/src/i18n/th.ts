@@ -31,6 +31,14 @@ export const th: Dictionary = {
     dark: "มืด",
     toggle: (current, next) => `ธีม: ${current} — เปลี่ยนเป็น${next}`,
   },
+  legal: {
+    privacy: "นโยบายความเป็นส่วนตัว",
+    terms: "ข้อกำหนดการใช้งาน",
+    updated: (date) => `ปรับปรุงล่าสุด ${date}`,
+    agreeBefore: "เมื่อดำเนินการต่อ ถือว่าคุณยอมรับ",
+    agreeAnd: "และรับทราบ",
+    agreeAfter: " ผู้ใช้ต้องมีอายุ 13 ปีขึ้นไป และหากอายุต่ำกว่า 20 ปีต้องได้รับความยินยอมจากผู้ปกครอง",
+  },
   footer: {
     encrypted: "ข้อมูลของคุณถูกเข้ารหัสในเบราว์เซอร์นี้ก่อนออกจากเครื่องเสมอ",
     support: "สนับสนุน Kunjae ☕ Buy me a coffee",

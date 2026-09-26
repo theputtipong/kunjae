@@ -150,6 +150,10 @@
     <string name="language_title">Language</string>
     <string name="language_system">System</string>
     <string name="section_about">About</string>
+    <string name="section_legal">Legal</string>
+    <string name="legal_privacy">Privacy Policy</string>
+    <string name="legal_terms">Terms of Use</string>
+    <string name="legal_agreement">By continuing you agree to the Terms of Use and acknowledge the Privacy Policy. You must be 13 or older; under 20 needs a parent\'s or guardian\'s consent.</string>
     <string name="about_version">Version %1$s</string>
     <string name="support_title">Support Kunjae ☕</string>
     <string name="support_subtitle">Buy me a coffee</string>

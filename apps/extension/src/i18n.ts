@@ -65,6 +65,10 @@ const en = {
   confirmPassword: "Re-enter Master Password",
   creatingKey: "Creating your keys…",
   signUp: "Sign up",
+  legalPrivacy: "Privacy Policy",
+  legalTerms: "Terms of Use",
+  legalAgreement:
+    "By continuing you agree to the Terms of Use and acknowledge the Privacy Policy. You must be 13 or older; under 20 needs a parent's or guardian's consent.",
 
   local: {
     welcomeTitle: "Welcome to Kunjae",
@@ -288,6 +292,10 @@ const th: Dictionary = {
   confirmPassword: "พิมพ์ Master Password อีกครั้ง",
   creatingKey: "กำลังสร้างกุญแจ…",
   signUp: "สมัครสมาชิก",
+  legalPrivacy: "นโยบายความเป็นส่วนตัว",
+  legalTerms: "ข้อกำหนดการใช้งาน",
+  legalAgreement:
+    "เมื่อดำเนินการต่อ ถือว่าคุณยอมรับข้อกำหนดการใช้งานและรับทราบนโยบายความเป็นส่วนตัว ผู้ใช้ต้องมีอายุ 13 ปีขึ้นไป และหากอายุต่ำกว่า 20 ปีต้องได้รับความยินยอมจากผู้ปกครอง",
 
   local: {
     welcomeTitle: "ยินดีต้อนรับสู่ Kunjae",

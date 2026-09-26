@@ -6,6 +6,7 @@ import { holdEmergencyKit } from "@kunjae/client-core";
 import { errorMessage } from "@kunjae/client-core";
 import { Button, Callout, Card, Field } from "../ui/primitives.tsx";
 import { useLang, useT } from "../i18n/index.ts";
+import { AgreementNote } from "./legal.tsx";
 
 export const SignUpPage = () => {
   const navigate = useNavigate();
@@ -88,6 +89,8 @@ export const SignUpPage = () => {
           />
 
           {error !== null && <Callout tone="danger">{error}</Callout>}
+
+          <AgreementNote />
 
           <Button type="submit" disabled={busy}>
             {busy ? t.signUp.busy : t.signUp.submit}
