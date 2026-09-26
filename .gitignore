@@ -35,6 +35,7 @@ apps/android/**/build/
 *.hprof
 
 *.md
+!/README.md
 .claude/
 CLAUDE.md
 .cursor/
