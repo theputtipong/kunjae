@@ -10,6 +10,7 @@ import {
   SyncPushRequestSchema,
 } from "@kunjae/contracts";
 import { constantTimeEqual } from "@kunjae/core-crypto";
+import { captureException } from "@sentry/cloudflare";
 import { Hono } from "hono";
 import type { Context, MiddlewareHandler } from "hono";
 import type { z } from "zod";
@@ -28,6 +29,8 @@ import { loginBegin, loginFinish } from "../usecases/login.ts";
 import { signUp } from "../usecases/sign-up.ts";
 import { syncPull, syncPush } from "../usecases/sync.ts";
 import { cors } from "./cors.ts";
+import { spendDailyBudget } from "../db/daily-usage.ts";
+import { underEdgeLimit, type EdgeLimiter } from "./edge-limit.ts";
 import { rateLimit } from "./rate-limit.ts";
 import { errorPayload, toErrorPayload } from "./responses.ts";
 
@@ -39,6 +42,15 @@ type Variables = {
 type App = { Bindings: Env; Variables: Variables };
 
 const MAX_BODY_BYTES = 1_048_576;
+
+const RETRY_AFTER_SECONDS = 60;
+
+const DAILY_BUDGET = { maxPulls: 500, maxChanges: 3000 } as const;
+
+type LimitClass = "sync-pull" | "sync-push" | "sensitive";
+
+const limiterFor = (env: Env, kind: LimitClass): EdgeLimiter | undefined =>
+  kind === "sensitive" ? env.SENSITIVE_LIMITER : env.SYNC_LIMITER;
 
 export const createApp = (): Hono<App> => {
   const app = new Hono<App>();
@@ -70,23 +82,46 @@ export const createApp = (): Hono<App> => {
     return next();
   });
 
-  const requireAuth: MiddlewareHandler<App> = async (c, next) => {
-    const header = c.req.header("Authorization") ?? "";
+  const tooMany = (c: Context<App>): Response => {
+    const payload = errorPayload(429, "RATE_LIMITED");
+    c.header("Retry-After", String(RETRY_AFTER_SECONDS));
+    return c.json(payload.body, payload.status);
+  };
 
-    const PREFIX = "Bearer ";
-    if (!header.startsWith(PREFIX)) {
-      const payload = errorPayload(401, "UNAUTHORIZED");
-      return c.json(payload.body, payload.status);
-    }
+  const requireAuth =
+    (kind: LimitClass): MiddlewareHandler<App> =>
+    async (c, next) => {
+      const header = c.req.header("Authorization") ?? "";
 
-    const identity = await authenticate(c.get("deps"), header.slice(PREFIX.length).trim());
-    if (!identity.ok) {
-      const payload = toErrorPayload(identity.error);
-      return c.json(payload.body, payload.status);
-    }
+      const PREFIX = "Bearer ";
+      if (!header.startsWith(PREFIX)) {
+        const payload = errorPayload(401, "UNAUTHORIZED");
+        return c.json(payload.body, payload.status);
+      }
 
-    c.set("identity", identity.value);
-    return next();
+      const identity = await authenticate(c.get("deps"), header.slice(PREFIX.length).trim(), (accountId) =>
+        underEdgeLimit(limiterFor(c.env, kind), `${kind}|${accountId}`),
+      );
+      if (!identity.ok) {
+        if (identity.error.kind === "RateLimited") return tooMany(c);
+        const payload = toErrorPayload(identity.error);
+        return c.json(payload.body, payload.status);
+      }
+
+      c.set("identity", identity.value);
+      return next();
+    };
+
+  const withinDailyBudget = async (c: Context<App>, pulls: number, changes: number): Promise<boolean | null> => {
+    const deps = c.get("deps");
+    const day = new Date(deps.nowMs).toISOString().slice(0, 10);
+    const spent = await spendDailyBudget(deps.db, c.get("identity").accountId, day, { pulls, changes }, DAILY_BUDGET);
+    return spent.ok ? spent.value : null;
+  };
+
+  const internalError = (c: Context<App>): Response => {
+    const payload = errorPayload(500, "INTERNAL");
+    return c.json(payload.body, payload.status);
   };
 
   const readBody = async <S extends z.ZodType>(
@@ -157,44 +192,52 @@ export const createApp = (): Hono<App> => {
     return respond(c, await loginFinish(c.get("deps"), body));
   });
 
-  app.post("/v1/auth/change-password", requireAuth, async (c) => {
+  app.post("/v1/auth/change-password", requireAuth("sensitive"), async (c) => {
     const body = await readBody(c, ChangeMasterPasswordRequestSchema);
     if (body === null) return badRequest(c);
 
     return respond(c, await changeMasterPassword(c.get("deps"), c.get("identity").accountId, body));
   });
 
-  app.post("/v1/account/delete", requireAuth, async (c) => {
+  app.post("/v1/account/delete", requireAuth("sensitive"), async (c) => {
     const body = await readBody(c, DeleteAccountRequestSchema);
     if (body === null) return badRequest(c);
 
     return respond(c, await deleteAccount(c.get("deps"), c.get("identity").accountId, body));
   });
 
-  app.post("/v1/auth/revoke-sessions", requireAuth, async (c) => {
+  app.post("/v1/auth/revoke-sessions", requireAuth("sensitive"), async (c) => {
     const body = await readBody(c, RevokeSessionsRequestSchema);
     if (body === null) return badRequest(c);
 
     return respond(c, await revokeSessions(c.get("deps"), c.get("identity").accountId, body));
   });
 
-  app.post("/v1/vaults", requireAuth, async (c) => {
+  app.post("/v1/vaults", requireAuth("sensitive"), async (c) => {
     const body = await readBody(c, CreateVaultRequestSchema);
     if (body === null) return badRequest(c);
 
     return respond(c, await createVault(c.get("deps"), c.get("identity").accountId, body));
   });
 
-  app.post("/v1/sync/pull", requireAuth, async (c) => {
+  app.post("/v1/sync/pull", requireAuth("sync-pull"), async (c) => {
     const body = await readBody(c, SyncPullRequestSchema);
     if (body === null) return badRequest(c);
+
+    const allowed = await withinDailyBudget(c, 1, 0);
+    if (allowed === null) return internalError(c);
+    if (!allowed) return tooMany(c);
 
     return respond(c, await syncPull(c.get("deps"), c.get("identity").accountId, body));
   });
 
-  app.post("/v1/sync/push", requireAuth, async (c) => {
+  app.post("/v1/sync/push", requireAuth("sync-push"), async (c) => {
     const body = await readBody(c, SyncPushRequestSchema);
     if (body === null) return badRequest(c);
+
+    const allowed = await withinDailyBudget(c, 0, body.changes.length);
+    if (allowed === null) return internalError(c);
+    if (!allowed) return tooMany(c);
 
     return respond(c, await syncPush(c.get("deps"), c.get("identity").accountId, body));
   });
@@ -204,9 +247,10 @@ export const createApp = (): Hono<App> => {
     return c.json(payload.body, payload.status);
   });
 
-  app.onError((_error, c) => {
+  app.onError((error, c) => {
     const payload = errorPayload(500, "INTERNAL");
     console.error(`unhandled error requestId=${payload.body.requestId}`);
+    captureException(error, { tags: { requestId: payload.body.requestId } });
     return c.json(payload.body, payload.status);
   });
 

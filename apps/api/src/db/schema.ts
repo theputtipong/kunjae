@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { check, index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { check, index, integer, primaryKey, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 export const accounts = sqliteTable(
   "accounts",
@@ -102,6 +102,17 @@ export const rateLimits = sqliteTable("rate_limits", {
 
   count: integer("count").notNull(),
 });
+
+export const accountDailyUsage = sqliteTable(
+  "account_daily_usage",
+  {
+    accountId: text("account_id").notNull(),
+    day: text("day").notNull(),
+    pulls: integer("pulls").notNull(),
+    changes: integer("changes").notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.accountId, table.day] })],
+);
 
 export const usageSnapshots = sqliteTable("usage_snapshots", {
   takenOn: text("taken_on").primaryKey(),

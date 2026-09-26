@@ -1,4 +1,4 @@
-import type { ItemChange, SyncedItem, VaultRecord } from "@kunjae/contracts";
+import { SYNC_LIMITS, type ItemChange, type SyncedItem, type VaultRecord } from "@kunjae/contracts";
 import { err, ok } from "@kunjae/core-crypto";
 import {
   createItem,
@@ -167,6 +167,64 @@ export const saveItem = async (params: SaveItemParams): Promise<AppResult<void>>
   });
 
   return ok(undefined);
+};
+
+export type NewItem = {
+  readonly itemId: string;
+  readonly content: ItemContent;
+};
+
+export const saveNewItems = async (
+  vaultId: string,
+  items: readonly NewItem[],
+  nowMs: number,
+): Promise<AppResult<number>> => {
+  const now = new Date(nowMs).toISOString();
+  let saved = 0;
+
+  for (let start = 0; start < items.length; start += SYNC_LIMITS.pushBatchSize) {
+    const batch = items.slice(start, start + SYNC_LIMITS.pushBatchSize);
+    const changes: ItemChange[] = [];
+
+    for (const item of batch) {
+      const change = await withVaultKey(vaultId, async (key) =>
+        createItem(key, { itemId: item.itemId, vaultId, content: item.content, now }),
+      );
+      if (change === null) return err(sessionExpired());
+      if (!change.ok) return err(unexpected());
+      changes.push(change.value);
+    }
+
+    let appliedIds: ReadonlySet<string>;
+
+    if (isLocalSession()) {
+      appliedIds = new Set(changes.map((change) => change.itemId));
+      for (const change of changes) {
+        const applied = await applyLocalChange(change);
+        if (!applied.ok) return saved > 0 ? ok(saved) : applied;
+      }
+    } else {
+      const token = await ensureToken(nowMs);
+      if (!token.ok) return saved > 0 ? ok(saved) : token;
+
+      const result = await apiSyncPush({ changes }, token.value);
+      if (!result.ok) {
+        const failure = err(lockIfSessionExpired(fromApiError(result.error)));
+        return saved > 0 ? ok(saved) : failure;
+      }
+      setRevision(result.value.revision);
+      appliedIds = new Set(result.value.applied.map((applied) => applied.itemId));
+    }
+
+    for (const [index, item] of batch.entries()) {
+      const change = changes[index];
+      if (change === undefined || !appliedIds.has(item.itemId)) continue;
+      upsertItem({ itemId: item.itemId, vaultId, version: change.version, content: item.content });
+      saved += 1;
+    }
+  }
+
+  return ok(saved);
 };
 
 export const deleteItemById = async (

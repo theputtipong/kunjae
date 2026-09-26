@@ -15,6 +15,7 @@ const ERROR_MAP: Record<UseCaseError["kind"], { status: ContentfulStatusCode; co
   Unauthorized: { status: 401, code: "UNAUTHORIZED" },
   Conflict: { status: 409, code: "CONFLICT" },
   Internal: { status: 500, code: "INTERNAL" },
+  RateLimited: { status: 429, code: "RATE_LIMITED" },
 };
 
 export type ErrorPayload = {

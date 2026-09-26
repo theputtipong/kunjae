@@ -44,6 +44,17 @@ const TIMEOUT_MS = 20_000;
 
 const MAX_RESPONSE_BYTES = 16_777_216;
 
+const RATE_LIMIT_RETRIES = 2;
+
+const MAX_RETRY_WAIT_MS = 60_000;
+
+const retryWaitMs = (response: Response): number => {
+  const seconds = Number(response.headers.get("Retry-After") ?? "");
+  return Number.isFinite(seconds) && seconds > 0 ? Math.min(seconds * 1000, MAX_RETRY_WAIT_MS) : MAX_RETRY_WAIT_MS;
+};
+
+const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+
 const PATHS = {
   signUp: "/v1/auth/sign-up",
   loginBegin: "/v1/auth/login/begin",
@@ -61,6 +72,7 @@ const request = async <S extends z.ZodType>(
   body: unknown,
   schema: S,
   token?: string,
+  retriesLeft = RATE_LIMIT_RETRIES,
 ): Promise<ApiResult<z.infer<S>>> => {
   let response: Response;
 
@@ -86,6 +98,11 @@ const request = async <S extends z.ZodType>(
       return err(requestTimedOut());
     }
     return err(networkUnavailable());
+  }
+
+  if (response.status === 429 && retriesLeft > 0) {
+    await sleep(retryWaitMs(response));
+    return request(path, body, schema, token, retriesLeft - 1);
   }
 
   const declaredLength = Number(response.headers.get("Content-Length") ?? "0");

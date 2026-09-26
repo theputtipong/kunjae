@@ -3,7 +3,7 @@ import { err, ok } from "@kunjae/core-crypto";
 import { verifyToken } from "../crypto/token.ts";
 import { findTokenEpoch } from "../db/accounts.ts";
 import type { Deps } from "./deps.ts";
-import { internal, unauthorized, type UseCaseResult } from "./errors.ts";
+import { internal, rateLimited, unauthorized, type UseCaseResult } from "./errors.ts";
 
 export type Identity = {
   readonly accountId: string;
@@ -12,9 +12,12 @@ export type Identity = {
 export const authenticate = async (
   deps: Deps,
   token: string,
+  admit: (accountId: string) => Promise<boolean> = () => Promise.resolve(true),
 ): Promise<UseCaseResult<Identity>> => {
   const claims = await verifyToken(deps.secrets.tokenSecret, token, deps.nowMs);
   if (!claims.ok) return err(unauthorized());
+
+  if (!(await admit(claims.value.sub))) return err(rateLimited());
 
   const currentEpoch = await findTokenEpoch(deps.db, claims.value.sub);
   if (!currentEpoch.ok) return err(internal());

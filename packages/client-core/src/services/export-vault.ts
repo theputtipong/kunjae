@@ -2,7 +2,7 @@ import { ItemContentSchema, type DecryptedItem, type ItemContent } from "@kunjae
 
 import { createUlid } from "../lib/ulid.ts";
 import { getAllItemsForExport as readAllItems } from "../store/vault-store.ts";
-import { saveItem } from "./sync.ts";
+import { saveNewItems, type NewItem } from "./sync.ts";
 import { invalidInput, type AppResult, type MessageLang } from "./errors.ts";
 
 export const EXPORT_FORMAT_VERSION = 1;
@@ -278,10 +278,10 @@ export const importVaultExport = async (
 
   const existing = new Set(readAllItems().map((item) => fingerprintOf(item.content)));
 
-  let added = 0;
   let skipped = 0;
   let invalid = 0;
   let failed = 0;
+  const pending: NewItem[] = [];
 
   for (const raw of rawItems) {
     if (typeof raw !== "object" || raw === null) {
@@ -305,28 +305,19 @@ export const importVaultExport = async (
       continue;
     }
 
-    const newId = createUlid(params.nowMs + added);
+    const newId = createUlid(params.nowMs + pending.length);
     if (!newId.ok) {
       failed += 1;
       continue;
     }
 
-    const saved = await saveItem({
-      itemId: newId.value,
-      vaultId: params.vaultId,
-      content: validated.data,
-      baseVersion: 0,
-      nowMs: params.nowMs,
-    });
-
-    if (!saved.ok) {
-      failed += 1;
-      continue;
-    }
-
     existing.add(fingerprint);
-    added += 1;
+    pending.push({ itemId: newId.value, content: validated.data });
   }
+
+  const saved = await saveNewItems(params.vaultId, pending, params.nowMs);
+  const added = saved.ok ? saved.value : 0;
+  failed += pending.length - added;
 
   return ok({ added, skipped, invalid, failed });
 };

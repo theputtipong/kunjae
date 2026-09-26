@@ -5,6 +5,7 @@
   "main": "src/index.ts",
 
   "compatibility_date": "2026-09-19",
+  "compatibility_flags": ["nodejs_als"],
 
   "d1_databases": [
     {
@@ -15,6 +16,11 @@
     }
   ],
 
+  "ratelimits": [
+    { "name": "PUBLIC_LIMITER", "namespace_id": "7101", "simple": { "limit": 12, "period": 60 } },
+    { "name": "SYNC_LIMITER", "namespace_id": "7102", "simple": { "limit": 30, "period": 60 } },
+    { "name": "SENSITIVE_LIMITER", "namespace_id": "7103", "simple": { "limit": 5, "period": 60 } }
+  ],
   "observability": {
     "enabled": true
   },

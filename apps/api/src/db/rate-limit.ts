@@ -31,14 +31,18 @@ export const touchRateLimit = async (
               THEN 1
             ELSE rate_limits.count + 1
           END
+        WHERE rate_limits.count < ${limit}
+          OR ${nowSeconds} - rate_limits.window_start >= ${windowSeconds}
         RETURNING count
       `),
     );
 
   if (!rows.ok) return rows;
 
-  const count = rows.value[0]?.count ?? 1;
-  return ok({ count, allowed: count <= limit });
+  const row = rows.value[0];
+  if (row === undefined) return ok({ count: limit + 1, allowed: false });
+
+  return ok({ count: row.count, allowed: row.count <= limit });
 };
 
 export const pruneRateLimits = async (

@@ -1,6 +1,8 @@
 import { err, ok } from "@kunjae/core-crypto";
 
 import type { Db } from "../db/client.ts";
+import { pruneDailyUsage } from "../db/daily-usage.ts";
+import { pruneRateLimits } from "../db/rate-limit.ts";
 import { previousSnapshot, recordSnapshot, sampleUsage } from "../db/usage.ts";
 import { internal, type UseCaseResult } from "./errors.ts";
 import { buildUsageReport, type UsageReport } from "./usage-report.ts";
@@ -40,7 +42,18 @@ export const readUsage = async (db: Db, now: Date): Promise<UseCaseResult<UsageR
   );
 };
 
+const RATE_LIMIT_RETENTION_SECONDS = 3600;
+const DAILY_USAGE_RETENTION_DAYS = 2;
+
 export const runDailyUsageCheck = async (db: Db, now: Date): Promise<UseCaseResult<UsageReport>> => {
+  const nowSeconds = Math.floor(now.getTime() / 1000);
+  const oldestDay = new Date(now.getTime() - DAILY_USAGE_RETENTION_DAYS * MS_PER_DAY).toISOString().slice(0, 10);
+  const pruned = await Promise.all([
+    pruneRateLimits(db, nowSeconds - RATE_LIMIT_RETENTION_SECONDS),
+    pruneDailyUsage(db, oldestDay),
+  ]);
+  if (pruned.some((result) => !result.ok)) console.error("[usage] ลบตัวนับเก่าไม่สำเร็จ");
+
   const report = await readUsage(db, now);
   if (!report.ok) return report;
 

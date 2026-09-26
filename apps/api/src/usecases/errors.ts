@@ -10,7 +10,15 @@ export type InvalidRequest = { readonly kind: "InvalidRequest" };
 
 export type Internal = { readonly kind: "Internal" };
 
-export type UseCaseError = InvalidCredentials | Unauthorized | Conflict | InvalidRequest | Internal;
+export type RateLimited = { readonly kind: "RateLimited" };
+
+export type UseCaseError =
+  | InvalidCredentials
+  | Unauthorized
+  | Conflict
+  | InvalidRequest
+  | Internal
+  | RateLimited;
 
 export type UseCaseResult<T> = Result<T, UseCaseError>;
 
@@ -19,3 +27,4 @@ export const unauthorized = (): Unauthorized => ({ kind: "Unauthorized" });
 export const conflict = (): Conflict => ({ kind: "Conflict" });
 export const invalidRequest = (): InvalidRequest => ({ kind: "InvalidRequest" });
 export const internal = (): Internal => ({ kind: "Internal" });
+export const rateLimited = (): RateLimited => ({ kind: "RateLimited" });

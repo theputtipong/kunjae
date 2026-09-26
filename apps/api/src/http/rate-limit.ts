@@ -2,18 +2,15 @@ import type { MiddlewareHandler } from "hono";
 
 import { hmacSha256 } from "../crypto/hmac.ts";
 import { readServerSecrets } from "../config/secrets.ts";
-import { pruneRateLimits, touchRateLimit } from "../db/rate-limit.ts";
+import { touchRateLimit } from "../db/rate-limit.ts";
 import { createDb } from "../db/client.ts";
 import { bytesToBase64Url, utf8ToBytes } from "@kunjae/core-crypto";
 
+import { underEdgeLimit } from "./edge-limit.ts";
 import { errorPayload } from "./responses.ts";
 
 const WINDOW_SECONDS = 60;
 const MAX_REQUESTS_PER_WINDOW = 12;
-
-const PRUNE_EVERY = 200;
-
-const PRUNE_OLDER_THAN_SECONDS = 3600;
 
 const RATE_LIMIT_LABEL = "kunjae.ratelimit.v1|";
 
@@ -42,15 +39,17 @@ export const rateLimit = (): MiddlewareHandler<{ Bindings: Env }> => async (c, n
   const bucket = await bucketFor(secrets.value.challengeKey, new URL(c.req.url).pathname, ip);
   if (bucket === null) return next();
 
+  if (!(await underEdgeLimit(c.env.PUBLIC_LIMITER, bucket))) {
+    const payload = errorPayload(429, "RATE_LIMITED");
+    c.header("Retry-After", String(WINDOW_SECONDS));
+    return c.json(payload.body, payload.status);
+  }
+
   const nowSeconds = Math.floor(Date.now() / 1000);
   const db = createDb(c.env.DB);
 
   const state = await touchRateLimit(db, bucket, nowSeconds, WINDOW_SECONDS, MAX_REQUESTS_PER_WINDOW);
   if (!state.ok) return next();
-
-  if (state.value.count % PRUNE_EVERY === 0) {
-    await pruneRateLimits(db, nowSeconds - PRUNE_OLDER_THAN_SECONDS);
-  }
 
   if (!state.value.allowed) {
     const payload = errorPayload(429, "RATE_LIMITED");
