@@ -3,6 +3,22 @@ import { Link } from "@tanstack/react-router";
 import { useLang, useT } from "../i18n/index.ts";
 import { LEGAL_EFFECTIVE_DATE, PRIVACY_POLICY, TERMS_OF_USE, type LegalDocument } from "../legal/documents.ts";
 
+const URL_PATTERN = /(https:\/\/[^\s]+[^\s.,;:)])/u;
+
+const Linkified = ({ text }: { readonly text: string }) => (
+  <>
+    {text.split(URL_PATTERN).map((part, index) =>
+      index % 2 === 1 ? (
+        <a key={part} href={part} className="font-medium break-all text-brand-700 underline">
+          {part}
+        </a>
+      ) : (
+        part
+      ),
+    )}
+  </>
+);
+
 const LegalPage = ({ doc }: { readonly doc: LegalDocument }) => {
   const t = useT();
 
@@ -19,13 +35,15 @@ const LegalPage = ({ doc }: { readonly doc: LegalDocument }) => {
           <h2 className="text-base font-semibold text-stone-900">{section.heading}</h2>
           {section.paragraphs.map((paragraph) => (
             <p key={paragraph} className="text-sm leading-relaxed text-stone-700">
-              {paragraph}
+              <Linkified text={paragraph} />
             </p>
           ))}
           {section.bullets !== undefined && (
             <ul className="list-disc space-y-1.5 pl-5 text-sm leading-relaxed text-stone-700">
               {section.bullets.map((bullet) => (
-                <li key={bullet}>{bullet}</li>
+                <li key={bullet}>
+                  <Linkified text={bullet} />
+                </li>
               ))}
             </ul>
           )}
