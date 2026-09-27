@@ -1,7 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="tamper_title">Kunjae ปิดตัวเองเพื่อปกป้องข้อมูล</string>
-    <string name="tamper_body">ตรวจพบว่าแอปถูกดัดแปลง ถูกดีบัก หรือมีเครื่องมือดักการทำงานอยู่ในเครื่อง ติดตั้ง Kunjae ใหม่จากแหล่งทางการแล้วลองอีกครั้ง</string>
+    <string name="update_required_title">ต้องอัปเดตแอป</string>
+    <string name="update_required_body">Kunjae เวอร์ชันนี้เลิกรองรับแล้ว กรุณาอัปเดตเป็นเวอร์ชันล่าสุดเพื่อใช้งานต่อ ข้อมูลของคุณยังอยู่ในเครื่องและในบัญชีครบถ้วน</string>
+    <string name="update_available_title">มีเวอร์ชันใหม่</string>
+    <string name="update_available_body">Kunjae มีเวอร์ชันใหม่ที่แก้ไขและปรับปรุงแล้ว</string>
+    <string name="update_action">อัปเดต</string>
+    <string name="update_later">ไว้ทีหลัง</string>
+    <string name="notification_channel_name">ประกาศ</string>
+    <string name="notifications_title">การแจ้งเตือน</string>
+    <string name="notifications_on_subtitle">เปิดอยู่ รับเฉพาะประกาศเกี่ยวกับบริการและความปลอดภัย ไม่มีข้อมูลใน vault</string>
+    <string name="notifications_off_subtitle">ปิดอยู่ แตะเพื่ออนุญาตประกาศเกี่ยวกับบริการและความปลอดภัย</string>
+    <string name="capture_title">อนุญาตให้จับภาพและบันทึกหน้าจอ</string>
+    <string name="capture_off_subtitle">ปิดอยู่ ขณะปลดล็อก vault จะบล็อกการจับภาพ การบันทึกหน้าจอ และภาพตัวอย่างในหน้าแอปล่าสุด</string>
+    <string name="capture_on_subtitle">เปิดอยู่ ทุกอย่างบนจอรวมถึงรหัสผ่านที่เปิดดูจะถูกจับภาพได้ ควรปิดเมื่อไม่ใช้</string>
+    <string name="integrity_title">ตรวจพบความผิดปกติด้านความปลอดภัย</string>
+    <string name="integrity_body">Kunjae ตรวจพบว่าแอปอาจถูกดัดแปลง หรือมีเครื่องมือดีบัก/ดักจับกำลังทำงานอยู่ คุณยังใช้ vault บนเครื่องนี้ได้ตามปกติ</string>
+    <string name="integrity_disabled">ระหว่างนี้ใช้ได้เฉพาะโหมดบนเครื่องนี้ ปิดการเข้าสู่ระบบ การซิงค์ การย้ายรายการเข้าบัญชี การเติมรหัสผ่านอัตโนมัติ และการเติมรหัส 2FA</string>
+    <string name="integrity_fix">วิธีแก้ให้กลับมาใช้ได้ครบ: ติดตั้ง Kunjae ใหม่จาก Google Play ปิด USB debugging และถอนเครื่องมือดักจับ (เช่น Frida, Xposed, LSPosed) แล้วเปิดแอปอีกครั้ง</string>
+    <string name="integrity_code">รหัส: %1$s</string>
+    <string name="integrity_continue">ใช้ต่อในโหมดบนเครื่องนี้</string>
+    <string name="integrity_account_blocked">ปิดการเข้าสู่ระบบเพราะการตรวจความปลอดภัยไม่ผ่าน คุณยังใช้ vault บนเครื่องนี้ได้ต่อ</string>
 
     <string name="onboarding_hint_debug">build ทดสอบนี้ต่อกับ API บน Mac (%1$s) — รัน pnpm dev ใน apps/web แล้วเปิด http://127.0.0.1:5173</string>
     <string name="onboarding_hint_release">เปิดเว็บแอป Kunjae บนคอมพิวเตอร์หรือเบราว์เซอร์ของมือถือ แล้วกดสมัคร</string>

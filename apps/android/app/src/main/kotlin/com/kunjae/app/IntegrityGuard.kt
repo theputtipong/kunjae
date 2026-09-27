@@ -10,7 +10,9 @@ import java.security.MessageDigest
 
 object IntegrityGuard {
 
-    enum class Finding { SIGNATURE, DEBUGGABLE, DEBUGGER, TRACER, HOOK }
+    enum class Finding(val code: Char) { SIGNATURE('S'), DEBUGGABLE('D'), DEBUGGER('G'), TRACER('T'), HOOK('H') }
+
+    fun code(findings: Set<Finding>): String = findings.sortedBy { it.ordinal }.map { it.code }.joinToString("")
 
     @Volatile
     private var signatureOk: Boolean? = null
@@ -48,8 +50,12 @@ object IntegrityGuard {
             if (allowedCerts.isEmpty()) return@runCatching false
             val info = context.packageManager.getPackageInfo(context.packageName, PackageManager.GET_SIGNING_CERTIFICATES)
             val signing = info.signingInfo ?: return@runCatching false
-            val signers = if (signing.hasMultipleSigners()) signing.apkContentsSigners else signing.signingCertificateHistory
-            val digests = signers.orEmpty().map { signature ->
+            val signers = if (signing.hasMultipleSigners()) {
+                signing.apkContentsSigners.orEmpty().toList()
+            } else {
+                listOfNotNull(signing.signingCertificateHistory?.lastOrNull())
+            }
+            val digests = signers.map { signature ->
                 MessageDigest.getInstance("SHA-256").digest(signature.toByteArray()).joinToString("") { "%02X".format(it) }
             }
             digests.isNotEmpty() && digests.all { it in allowedCerts }

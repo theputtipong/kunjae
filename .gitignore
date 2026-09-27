@@ -46,3 +46,4 @@ CLAUDE.md
 *production-secrets*.json
 .wrangler.deploy.json
 worker-configuration.d.ts
+apps/android/app/google-services.json

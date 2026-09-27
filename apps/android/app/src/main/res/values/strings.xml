@@ -1,12 +1,30 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="update_required_title">Update required</string>
+    <string name="update_required_body">This version of Kunjae is no longer supported. Update to the latest version to keep using it. Your data stays on your device and in your account.</string>
+    <string name="update_available_title">Update available</string>
+    <string name="update_available_body">A newer version of Kunjae is available with fixes and improvements.</string>
+    <string name="update_action">Update</string>
+    <string name="update_later">Later</string>
+    <string name="notification_channel_id" translatable="false">announcements</string>
+    <string name="notification_channel_name">Announcements</string>
+    <string name="notifications_title">Notifications</string>
+    <string name="notifications_on_subtitle">On. Service and security announcements only — never your vault contents</string>
+    <string name="notifications_off_subtitle">Off. Tap to allow service and security announcements</string>
+    <string name="capture_title">Allow screenshots and screen recording</string>
+    <string name="capture_off_subtitle">Off. While your vault is unlocked, screenshots, recordings and the recent-apps preview are blocked</string>
+    <string name="capture_on_subtitle">On. Anything on screen, including revealed passwords, can be captured. Turn off when not needed</string>
+    <string name="integrity_title">Security check found a problem</string>
+    <string name="integrity_body">Kunjae detected that this app may have been modified, or that a debugging or instrumentation tool is running. Your vault on this device is still available.</string>
+    <string name="integrity_disabled">Until this is fixed, only device-only mode works. Signing in, sync, moving items into an account, autofill and 2FA autofill are turned off.</string>
+    <string name="integrity_fix">To restore everything: reinstall Kunjae from Google Play, turn off USB debugging and remove hooking tools (such as Frida, Xposed or LSPosed), then reopen the app.</string>
+    <string name="integrity_code">Code: %1$s</string>
+    <string name="integrity_continue">Continue in device-only mode</string>
+    <string name="integrity_account_blocked">Signing in is turned off because the security check failed. You can keep using the vault on this device.</string>
     <string name="app_name" translatable="false">Kunjae</string>
     <string name="master_password" translatable="false">Master Password</string>
     <string name="secret_key" translatable="false">Secret Key</string>
     <string name="emergency_kit" translatable="false">Emergency Kit</string>
-
-    <string name="tamper_title">Kunjae shut itself down to protect your data</string>
-    <string name="tamper_body">This app appears to have been modified or debugged, or an instrumentation tool is running on this device. Reinstall Kunjae from an official source and try again.</string>
 
     <string name="onboarding_hint_debug">This test build talks to the API on your Mac (%1$s). Run pnpm dev in apps/web, then open http://127.0.0.1:5173</string>
     <string name="onboarding_hint_release">Open the Kunjae web app on a computer or in your phone\'s browser, then tap Sign up.</string>

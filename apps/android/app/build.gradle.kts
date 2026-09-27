@@ -7,6 +7,13 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
 }
 
+val firebaseConfigured = file("google-services.json").exists()
+if (firebaseConfigured) {
+    apply(plugin = "com.google.gms.google-services")
+    apply(plugin = "com.google.firebase.crashlytics")
+    apply(plugin = "com.google.firebase.firebase-perf")
+}
+
 val keystoreProperties = Properties().apply {
     val file = rootProject.file("keystore.properties")
     if (file.exists()) file.inputStream().use { load(it) }
@@ -78,6 +85,7 @@ android {
         targetSdk = 36
         versionCode = appVersionCode
         versionName = appVersionName
+        buildConfigField("boolean", "FIREBASE_ENABLED", "$firebaseConfigured")
         resValue("string", "asset_statements", assetStatements)
         buildConfigField("String", "WEB_ORIGIN", "\"${webOrigin.takeIf { it.startsWith("https://") || it.startsWith("http://") } ?: ""}\"")
     }
@@ -100,10 +108,12 @@ android {
                 .getOrElse("http://10.0.2.2:8787")
             buildConfigField("String", "API_BASE_URL", "\"$debugApiBaseUrl\"")
             buildConfigField("String", "SIGNING_CERTS", "\"\"")
+            manifestPlaceholders["firebaseCollection"] = "false"
         }
         release {
             buildConfigField("String", "API_BASE_URL", "\"$releaseApiBaseUrl\"")
             buildConfigField("String", "SIGNING_CERTS", "\"$allowedSigningCerts\"")
+            manifestPlaceholders["firebaseCollection"] = firebaseConfigured.toString()
 
             isMinifyEnabled = true
             isShrinkResources = true
@@ -161,6 +171,12 @@ dependencies {
     implementation("androidx.activity:activity-compose:1.10.1")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.9.4")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.9.4")
+
+    implementation(platform("com.google.firebase:firebase-bom:34.19.0"))
+    implementation("com.google.firebase:firebase-crashlytics")
+    implementation("com.google.firebase:firebase-config")
+    implementation("com.google.firebase:firebase-messaging")
+    implementation("com.google.firebase:firebase-perf")
 }
 
 tasks.matching { it.name == "preReleaseBuild" }.configureEach {

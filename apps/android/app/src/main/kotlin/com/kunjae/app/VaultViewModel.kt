@@ -110,7 +110,14 @@ class VaultViewModel(application: Application) : AndroidViewModel(application) {
     private fun slotOf(mode: Mode): BiometricVault.Slot =
         if (mode == Mode.LOCAL) BiometricVault.Slot.LOCAL else BiometricVault.Slot.ACCOUNT
 
+    private fun accountBlocked(): Boolean {
+        if (!IntegrityGuard.compromised(getApplication())) return false
+        update(uiState.copy(busy = false, message = UiText.Res(R.string.integrity_account_blocked)))
+        return true
+    }
+
     fun unlock(email: String, masterPassword: String, secretKeyText: String) {
+        if (accountBlocked()) return
         update(uiState.copy(busy = true, message = null))
 
         viewModelScope.launch {
@@ -136,6 +143,7 @@ class VaultViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun resumeFromBiometric(context: Context, cipher: javax.crypto.Cipher) {
+        if (accountBlocked()) return
         update(uiState.copy(busy = true, message = null))
 
         viewModelScope.launch {

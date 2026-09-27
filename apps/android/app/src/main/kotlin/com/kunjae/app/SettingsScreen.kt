@@ -7,6 +7,11 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import android.app.Activity
 import android.content.Intent
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.compose.rememberLauncherForActivityResult
+import android.os.Build
+import android.content.pm.PackageManager
+import android.Manifest
 import android.net.Uri
 import android.provider.Settings
 import android.view.autofill.AutofillManager
@@ -62,6 +67,8 @@ fun SettingsScreen(
     onShowIntro: () -> Unit,
     themeMode: ThemeMode,
     onThemeChange: (ThemeMode) -> Unit,
+    captureAllowed: Boolean,
+    onCaptureChange: (Boolean) -> Unit,
 ) {
     val activity = LocalContext.current as? Activity
     var creatingVault by remember { mutableStateOf(false) }
@@ -153,6 +160,13 @@ fun SettingsScreen(
                         trailing = { Icon(KIcons.ChevronRight, contentDescription = null) },
                     )
                 }
+                SettingsRow(
+                    KIcons.Visibility,
+                    stringResource(R.string.capture_title),
+                    stringResource(if (captureAllowed) R.string.capture_on_subtitle else R.string.capture_off_subtitle),
+                    onClick = { onCaptureChange(!captureAllowed) },
+                    trailing = { Switch(checked = captureAllowed, onCheckedChange = onCaptureChange) },
+                )
                 SettingsRow(KIcons.Lock, stringResource(R.string.auto_lock), stringResource(R.string.auto_lock_subtitle))
                 SettingsRow(KIcons.Lock, stringResource(R.string.lock_now), onClick = model::lock)
             }
@@ -201,6 +215,7 @@ fun SettingsScreen(
                     onSelect = onThemeChange,
                 )
                 activity?.let { LanguageRow(it) }
+                if (FirebaseSupport.enabled(LocalContext.current)) NotificationRow()
             }
 
             SectionCard(title = stringResource(R.string.section_help)) {
@@ -298,6 +313,35 @@ private fun LanguageRow(activity: Activity) {
             AppLocale.supported.map { it to AppLocale.displayName(it) },
         selected = current,
         onSelect = { AppLocale.select(activity, it) },
+    )
+}
+
+@Composable
+private fun NotificationRow() {
+    val context = LocalContext.current
+    fun granted(): Boolean = Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+        context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+    var on by remember { mutableStateOf(granted()) }
+    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { on = it }
+    val openSystem = {
+        context.startActivity(
+            Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+        )
+    }
+    SettingsRow(
+        KIcons.Info,
+        stringResource(R.string.notifications_title),
+        stringResource(if (on) R.string.notifications_on_subtitle else R.string.notifications_off_subtitle),
+        onClick = {
+            if (!on && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                launcher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            } else {
+                openSystem()
+            }
+        },
+        trailing = { Icon(KIcons.ChevronRight, contentDescription = null) },
     )
 }
 

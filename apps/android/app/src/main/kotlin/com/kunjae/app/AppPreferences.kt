@@ -40,6 +40,16 @@ object ThemePrefs {
     }
 }
 
+object CapturePrefs {
+    private const val KEY = "capture.allowed.v1"
+
+    fun load(context: Context): Boolean = prefs(context).getBoolean(KEY, false)
+
+    fun save(context: Context, allowed: Boolean) {
+        prefs(context).edit().putBoolean(KEY, allowed).apply()
+    }
+}
+
 object AppLocale {
     private const val KEY = "app.locale.v1"
 

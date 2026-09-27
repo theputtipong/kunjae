@@ -113,7 +113,7 @@ private fun BusyLabel(busy: Boolean, idle: String) {
 }
 
 @Composable
-fun StartScreen(onStartLocal: () -> Unit, onSignIn: () -> Unit, onHelp: () -> Unit) {
+fun StartScreen(onStartLocal: () -> Unit, onSignIn: () -> Unit, onHelp: () -> Unit, accountAllowed: Boolean = true) {
     val activity = LocalContext.current as? Activity
     val origin = BuildConfig.WEB_ORIGIN
 
@@ -160,7 +160,7 @@ fun StartScreen(onStartLocal: () -> Unit, onSignIn: () -> Unit, onHelp: () -> Un
             Text(stringResource(R.string.start_sign_in))
         }
         Text(
-            stringResource(R.string.start_sign_in_body),
+            stringResource(if (accountAllowed) R.string.start_sign_in_body else R.string.integrity_account_blocked),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
