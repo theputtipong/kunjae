@@ -27,7 +27,7 @@ export const sendWithResend = async (apiKey: string, email: OutgoingEmail): Prom
         subject: email.subject,
         text: email.text,
       }),
-      redirect: "error",
+      redirect: "manual",
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
     await response.body?.cancel();
