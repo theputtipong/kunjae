@@ -261,7 +261,7 @@ debug build ชี้ไปที่ API ในเครื่อง (`10.0.2.2`
 | `ALLOWED_ORIGINS` | API (secret) | origin ของเว็บที่อนุญาต คั่นด้วยจุลภาค |
 | `ADMIN_TOKEN` | API (secret, ไม่บังคับ) | เปิดใช้ `GET /v1/admin/usage` |
 | `RESEND_API_KEY` | API (secret) | key ของ Resend สำหรับฟอร์มติดต่อ · ไม่ตั้ง = `POST /v1/contact` ตอบ 503 |
-| `CONTACT_FROM` · `CONTACT_TO` | API (secret หรือ var) | ผู้ส่ง (ต้องเป็นโดเมนที่ยืนยันใน Resend แล้ว เช่น `Kunjae <contact@pdouvch.com>`) และกล่องอีเมลที่รับ |
+| `CONTACT_FROM` · `CONTACT_TO` | API (`vars` ใน `wrangler.jsonc`) | ผู้ส่งและกล่องอีเมลที่รับ · ค่าเริ่มต้นใช้โหมด sandbox ของ Resend (`onboarding@resend.dev`) ซึ่งส่งได้เฉพาะถึงอีเมลที่ใช้สมัคร Resend · ถ้ายืนยันโดเมนแล้วเปลี่ยน `CONTACT_FROM` เป็นอีเมลบนโดเมนนั้น |
 | `SENTRY_DSN` | API (secret, ไม่บังคับ) | เปิดการส่ง error ไป Sentry (กรองข้อมูลส่วนบุคคลออกก่อนส่ง) |
 | `VITE_API_BASE_URL` | เว็บ (build) | ที่อยู่ API และถูกใส่ลง `connect-src` ของ CSP |
 | `VITE_PLAY_SIGNING_CERT_SHA256` | เว็บ (build) | ลายนิ้วมือของ Play App Signing ที่ใส่ลง `assetlinks.json` |

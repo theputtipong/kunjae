@@ -16,6 +16,10 @@
     }
   ],
 
+  "vars": {
+    "CONTACT_FROM": "Kunjae <onboarding@resend.dev>",
+    "CONTACT_TO": "support.pdouvch@gmail.com"
+  },
   "ratelimits": [
     { "name": "PUBLIC_LIMITER", "namespace_id": "7101", "simple": { "limit": 12, "period": 60 } },
     { "name": "SYNC_LIMITER", "namespace_id": "7102", "simple": { "limit": 30, "period": 60 } },
