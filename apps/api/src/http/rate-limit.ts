@@ -9,8 +9,12 @@ import { bytesToBase64Url, utf8ToBytes } from "@kunjae/core-crypto";
 import { underEdgeLimit } from "./edge-limit.ts";
 import { errorPayload } from "./responses.ts";
 
-const WINDOW_SECONDS = 60;
-const MAX_REQUESTS_PER_WINDOW = 12;
+export type RateLimitOptions = {
+  readonly windowSeconds: number;
+  readonly maxRequests: number;
+};
+
+const DEFAULT_LIMIT: RateLimitOptions = { windowSeconds: 60, maxRequests: 12 };
 
 const RATE_LIMIT_LABEL = "kunjae.ratelimit.v1|";
 
@@ -30,7 +34,9 @@ const bucketFor = async (
   return bytesToBase64Url(mac.value.slice(0, BUCKET_BYTES));
 };
 
-export const rateLimit = (): MiddlewareHandler<{ Bindings: Env }> => async (c, next) => {
+export const rateLimit =
+  (limit: RateLimitOptions = DEFAULT_LIMIT): MiddlewareHandler<{ Bindings: Env }> =>
+  async (c, next) => {
   const secrets = readServerSecrets(c.env);
   if (!secrets.ok) return next();
 
@@ -41,19 +47,19 @@ export const rateLimit = (): MiddlewareHandler<{ Bindings: Env }> => async (c, n
 
   if (!(await underEdgeLimit(c.env.PUBLIC_LIMITER, bucket))) {
     const payload = errorPayload(429, "RATE_LIMITED");
-    c.header("Retry-After", String(WINDOW_SECONDS));
+    c.header("Retry-After", String(limit.windowSeconds));
     return c.json(payload.body, payload.status);
   }
 
   const nowSeconds = Math.floor(Date.now() / 1000);
   const db = createDb(c.env.DB);
 
-  const state = await touchRateLimit(db, bucket, nowSeconds, WINDOW_SECONDS, MAX_REQUESTS_PER_WINDOW);
+  const state = await touchRateLimit(db, bucket, nowSeconds, limit.windowSeconds, limit.maxRequests);
   if (!state.ok) return next();
 
   if (!state.value.allowed) {
     const payload = errorPayload(429, "RATE_LIMITED");
-    c.header("Retry-After", String(WINDOW_SECONDS));
+    c.header("Retry-After", String(limit.windowSeconds));
     return c.json(payload.body, payload.status);
   }
 

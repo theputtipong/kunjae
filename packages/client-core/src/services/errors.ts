@@ -17,6 +17,8 @@ export type AppError =
   | { readonly kind: "LocalVaultCorrupt" }
   | { readonly kind: "LocalStorageFailed" }
   | { readonly kind: "AccountRequired" }
+  | { readonly kind: "RateLimited" }
+  | { readonly kind: "ServiceUnavailable" }
   | { readonly kind: "Unexpected" };
 
 export type AppResult<T> = Result<T, AppError>;
@@ -36,6 +38,8 @@ export const localVaultMissing = (): AppError => ({ kind: "LocalVaultMissing" })
 export const localVaultCorrupt = (): AppError => ({ kind: "LocalVaultCorrupt" });
 export const localStorageFailed = (): AppError => ({ kind: "LocalStorageFailed" });
 export const accountRequired = (): AppError => ({ kind: "AccountRequired" });
+export const rateLimited = (): AppError => ({ kind: "RateLimited" });
+export const serviceUnavailable = (): AppError => ({ kind: "ServiceUnavailable" });
 export const unexpected = (): AppError => ({ kind: "Unexpected" });
 
 export const fromApiError = (error: { readonly kind: string; readonly code?: string }): AppError => {
@@ -49,6 +53,10 @@ export const fromApiError = (error: { readonly kind: string; readonly code?: str
       return sessionExpired();
     case "CONFLICT":
       return emailTaken();
+    case "RATE_LIMITED":
+      return rateLimited();
+    case "UNAVAILABLE":
+      return serviceUnavailable();
     default:
       return unexpected();
   }
@@ -99,6 +107,8 @@ const MESSAGES: Readonly<Record<MessageLang, Readonly<Record<Exclude<AppError["k
     LocalVaultCorrupt: "The vault saved on this device is damaged and can't be opened.",
     LocalStorageFailed: "Couldn't save to this device's storage — your latest change wasn't saved.",
     AccountRequired: "This needs a Kunjae account — sign in first.",
+    RateLimited: "Too many requests — please wait a while and try again.",
+    ServiceUnavailable: "This service is temporarily unavailable — please try again later.",
     Unexpected: "Something unexpected went wrong.",
   },
   th: {
@@ -115,6 +125,8 @@ const MESSAGES: Readonly<Record<MessageLang, Readonly<Record<Exclude<AppError["k
     LocalVaultCorrupt: "ข้อมูลตู้นิรภัยที่เก็บบนเครื่องนี้เสียหาย จึงเปิดไม่ได้",
     LocalStorageFailed: "บันทึกลงพื้นที่เก็บข้อมูลของเครื่องนี้ไม่สำเร็จ — การแก้ไขล่าสุดยังไม่ถูกบันทึก",
     AccountRequired: "ต้องใช้บัญชี Kunjae — กรุณาเข้าสู่ระบบก่อน",
+    RateLimited: "มีคำขอมากเกินไป — กรุณารอสักครู่แล้วลองใหม่",
+    ServiceUnavailable: "บริการนี้ใช้งานไม่ได้ชั่วคราว — กรุณาลองใหม่ภายหลัง",
     Unexpected: "เกิดข้อผิดพลาดที่ไม่คาดคิด",
   },
 };

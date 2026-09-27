@@ -49,7 +49,7 @@ const privacyEn: LegalDocument = {
     {
       heading: "4. Data used for security and reliability",
       bullets: [
-        "Abuse protection: to limit repeated sign-in and sign-up attempts, we keep counters keyed by a one-way keyed hash of your IP address and the page requested. Your raw IP address is not stored in our database, and these counters are deleted within about 25 hours.",
+        "Abuse protection: to limit repeated sign-in, sign-up and contact-form attempts, we keep counters keyed by a one-way keyed hash of your IP address and the page requested. Your raw IP address is not stored in our database, and these counters are deleted within about 25 hours.",
         "Service logs: our hosting provider, Cloudflare, processes your IP address and basic request details (such as the address requested and the time) to deliver the service and keeps operational logs for a short period.",
         "Error monitoring: if enabled, error reports are sent to Sentry. Before anything is sent we remove IP addresses, request headers, cookies, query strings, request bodies and user identifiers. Reports contain only the error, the request method, the path and the response code.",
         "Usage totals: once a day we record service-wide totals (numbers of accounts, vaults and items, and estimated storage) to stay within our hosting limits. These totals contain no personal data.",
@@ -57,13 +57,20 @@ const privacyEn: LegalDocument = {
       paragraphs: [],
     },
     {
-      heading: "5. Vaults that stay on your device",
+      heading: "5. When you contact us",
+      paragraphs: [
+        "If you use the contact form or the account deletion request form, we receive the email address, the optional name and subject, and the message you enter. The form is sent through our server to Resend, which delivers it to our support mailbox (Gmail). We do not store these messages in the Kunjae database. We use them only to answer you and to handle your request, and keep them in our mailbox for as long as needed for that and as a record of requests we have handled.",
+        "Never include your Master Password, Secret Key or saved passwords in a message. We will never ask for them.",
+      ],
+    },
+    {
+      heading: "6. Vaults that stay on your device",
       paragraphs: [
         "If you use Kunjae without an account, your vault is encrypted with a password you choose and stored only on that device (in the browser's IndexedDB, or in the Android app's private storage). Nothing about it is sent to us unless you later move it into an account.",
       ],
     },
     {
-      heading: "6. Data stored on your device",
+      heading: "7. Data stored on your device",
       bullets: [
         "Web app: your theme, language, whether you have seen the introduction and whether you dismissed the install prompt (in local storage); an encrypted on-device vault if you create one (in IndexedDB); and a cached copy of the app's own files so it loads quickly.",
         "Android app: the same preferences; an encrypted on-device vault if you create one; and, only if you turn on biometric unlock, derived keys encrypted with a key held in your phone's secure hardware, which expire after 14 days. Your Master Password and Secret Key are never stored. The app opts out of Android cloud backup and device transfer.",
@@ -73,13 +80,13 @@ const privacyEn: LegalDocument = {
       paragraphs: [],
     },
     {
-      heading: "7. Android autofill and websites you have saved",
+      heading: "8. Android autofill and websites you have saved",
       paragraphs: [
         "When you use autofill inside another Android app, Kunjae checks that the app really belongs to the website saved in your login by downloading that website's public /.well-known/assetlinks.json file directly from your phone. That website can see your device's IP address, as with any visit. Nothing from your vault is sent. Autofill in web pages and browsers does not make this request.",
       ],
     },
     {
-      heading: "8. What we do not do",
+      heading: "9. What we do not do",
       bullets: [
         "No advertising, analytics, tracking pixels or third-party trackers in any Kunjae app.",
         "We do not sell, rent or share your personal data for marketing.",
@@ -90,13 +97,13 @@ const privacyEn: LegalDocument = {
       ],
     },
     {
-      heading: "9. Service providers and international transfers",
+      heading: "10. Service providers and international transfers",
       paragraphs: [
-        "We use Cloudflare, Inc. to host the web app and the sync server and to store the database, and, when error monitoring is enabled, Functional Software, Inc. (Sentry). They process data on our behalf and may do so in countries outside Thailand, including the United States. We rely on their contractual data protection commitments, and the vault contents they store remain encrypted with keys they do not have.",
+        "We use Cloudflare, Inc. to host the web app and the sync server and to store the database; Resend (Plus Five Five, Inc.) to deliver contact-form messages; Google LLC (Gmail) for our support mailbox; and, when error monitoring is enabled, Functional Software, Inc. (Sentry). They process data on our behalf and may do so in countries outside Thailand, including the United States. We rely on their contractual data protection commitments, and the vault contents they store remain encrypted with keys they do not have.",
       ],
     },
     {
-      heading: "10. Why we process your data (legal basis)",
+      heading: "11. Why we process your data (legal basis)",
       bullets: [
         "To provide the service you asked for — creating your account, signing you in and syncing your encrypted vault (performance of a contract).",
         "To keep the service secure, prevent abuse and keep it running within its limits (our legitimate interests).",
@@ -105,38 +112,47 @@ const privacyEn: LegalDocument = {
       paragraphs: [],
     },
     {
-      heading: "11. How long we keep data",
+      heading: "12. How long we keep data",
       paragraphs: [
-        "Account data is kept until you delete your account. Deleting your account (Settings on the web app) immediately removes your account, vaults and items from our database. Abuse-protection counters are removed within about 3 days. Our hosting provider's database recovery backups may retain deleted data for up to 30 days before it is permanently overwritten. Service-wide usage totals contain no personal data and may be kept indefinitely.",
+        "Account data is kept until you delete your account (see section 13). Deleting your account immediately removes your account, vaults and items from our database. Abuse-protection counters are removed within about 3 days. Our hosting provider's database recovery backups may retain deleted data for up to 30 days before it is permanently overwritten. Service-wide usage totals contain no personal data and may be kept indefinitely.",
       ],
     },
     {
-      heading: "12. Your rights",
+      heading: "13. Deleting your account",
       paragraphs: [
-        "Under the PDPA you may ask to access, receive a copy of, correct or delete your personal data, to object to or restrict its processing, and to withdraw consent where we rely on it. You can already export all of your vault data and delete your account yourself in the web app. For anything else, email us — we will reply within 30 days. You also have the right to complain to the Office of the Personal Data Protection Committee of Thailand.",
+        "You can delete your account yourself at any time: sign in to the web app, open Settings and choose \"Delete account\". This removes your account, vaults and items from our database immediately.",
+        "If you cannot sign in, request deletion at https://kunjae.pdouvch.com/delete-account or by emailing us from the account's email address. To stop anyone else from deleting your account, we reply to that address and delete the account only after you confirm. We complete confirmed requests within 30 days.",
+        "Deleted: your account record (including your email address and login data), all vaults and items on our servers, and sync counters linked to your account (within about 3 days). May remain for a limited time: our hosting provider's database recovery backups (up to 30 days) and your deletion request email, kept as a record that we handled it.",
+        "A vault kept only on your device is never sent to us. Delete it in the app's Settings, or by clearing the app's data or the site data in your browser.",
+      ],
+    },
+    {
+      heading: "14. Your rights",
+      paragraphs: [
+        "Under the PDPA you may ask to access, receive a copy of, correct or delete your personal data, to object to or restrict its processing, and to withdraw consent where we rely on it. You can already export all of your vault data and delete your account yourself in the web app. For anything else, use https://kunjae.pdouvch.com/contact or email us — we will reply within 30 days. You also have the right to complain to the Office of the Personal Data Protection Committee of Thailand.",
         "Because your vault is encrypted with keys only you hold, we cannot provide or recover its contents for you.",
       ],
     },
     {
-      heading: "13. Children",
+      heading: "15. Children",
       paragraphs: [
         "Kunjae is not intended for children under 13. If you are under 20, you need the consent of a parent or legal guardian to use Kunjae. If you believe a child has created an account without that consent, contact us and we will delete it.",
       ],
     },
     {
-      heading: "14. Security",
+      heading: "16. Security",
       paragraphs: [
         "We protect your data with end-to-end encryption, keys derived with Argon2id, keyed hashing on the server, encrypted connections and strict limits on what our apps can access. No system is completely secure; please keep your Master Password, Secret Key and devices safe.",
       ],
     },
     {
-      heading: "15. Changes to this policy",
+      heading: "17. Changes to this policy",
       paragraphs: [
         "We may update this policy. The date at the top shows the latest version, and we will point out significant changes in the apps before they take effect.",
       ],
     },
     {
-      heading: "16. Contact",
+      heading: "18. Contact",
       paragraphs: [`${LEGAL_OPERATOR} · ${LEGAL_CONTACT_EMAIL}`],
     },
   ],
@@ -175,7 +191,7 @@ const privacyTh: LegalDocument = {
     {
       heading: "4. ข้อมูลที่ใช้เพื่อความปลอดภัยและความเสถียร",
       bullets: [
-        "การป้องกันการใช้ในทางที่ผิด: เพื่อจำกัดการพยายามเข้าสู่ระบบและสมัครซ้ำๆ เราเก็บตัวนับที่อ้างอิงด้วยค่าแฮชทางเดียวแบบมีกุญแจของหมายเลข IP กับหน้าที่ร้องขอ เราไม่เก็บหมายเลข IP ดิบในฐานข้อมูล และตัวนับเหล่านี้ถูกลบภายในประมาณ 25 ชั่วโมง",
+        "การป้องกันการใช้ในทางที่ผิด: เพื่อจำกัดการพยายามเข้าสู่ระบบ สมัคร และส่งฟอร์มติดต่อซ้ำๆ เราเก็บตัวนับที่อ้างอิงด้วยค่าแฮชทางเดียวแบบมีกุญแจของหมายเลข IP กับหน้าที่ร้องขอ เราไม่เก็บหมายเลข IP ดิบในฐานข้อมูล และตัวนับเหล่านี้ถูกลบภายในประมาณ 25 ชั่วโมง",
         "บันทึกการทำงาน: ผู้ให้บริการโฮสต์ของเรา คือ Cloudflare ประมวลผลหมายเลข IP และรายละเอียดพื้นฐานของคำขอ (เช่น ที่อยู่ที่ร้องขอและเวลา) เพื่อให้บริการ และเก็บบันทึกการทำงานไว้ช่วงสั้นๆ",
         "การติดตามข้อผิดพลาด: หากเปิดใช้ รายงานข้อผิดพลาดจะถูกส่งไปยัง Sentry ก่อนส่งเราลบหมายเลข IP, header ของคำขอ, cookie, query string, เนื้อหาของคำขอ และตัวระบุผู้ใช้ออกทั้งหมด รายงานมีเพียงข้อผิดพลาด ประเภทคำขอ path และรหัสผลลัพธ์",
         "ยอดรวมการใช้งาน: วันละครั้งเราบันทึกยอดรวมทั้งระบบ (จำนวนบัญชี vault รายการ และพื้นที่โดยประมาณ) เพื่อให้อยู่ในขีดจำกัดของโฮสต์ ยอดรวมนี้ไม่มีข้อมูลส่วนบุคคล",
@@ -183,13 +199,20 @@ const privacyTh: LegalDocument = {
       paragraphs: [],
     },
     {
-      heading: "5. คลังข้อมูลที่อยู่ในอุปกรณ์ของคุณเท่านั้น",
+      heading: "5. เมื่อคุณติดต่อเรา",
+      paragraphs: [
+        "หากคุณใช้ฟอร์มติดต่อหรือฟอร์มขอลบบัญชี เราจะได้รับอีเมล ชื่อและเรื่อง (ถ้ากรอก) และข้อความที่คุณเขียน ฟอร์มถูกส่งผ่านเซิร์ฟเวอร์ของเราไปยัง Resend ซึ่งส่งต่อเข้ากล่องอีเมลฝ่ายช่วยเหลือของเรา (Gmail) เราไม่เก็บข้อความเหล่านี้ในฐานข้อมูลของ Kunjae และใช้เพื่อตอบคุณและดำเนินการตามคำขอเท่านั้น โดยเก็บไว้ในกล่องอีเมลเท่าที่จำเป็นต่อการดำเนินการ และเป็นหลักฐานของคำขอที่ดำเนินการแล้ว",
+        "ห้ามใส่ Master Password, Secret Key หรือรหัสผ่านที่บันทึกไว้ในข้อความ เราจะไม่ขอข้อมูลเหล่านี้ไม่ว่ากรณีใด",
+      ],
+    },
+    {
+      heading: "6. คลังข้อมูลที่อยู่ในอุปกรณ์ของคุณเท่านั้น",
       paragraphs: [
         "หากคุณใช้ Kunjae โดยไม่มีบัญชี คลังข้อมูลจะถูกเข้ารหัสด้วยรหัสผ่านที่คุณตั้งและเก็บไว้ในอุปกรณ์นั้นเท่านั้น (ใน IndexedDB ของเบราว์เซอร์ หรือในพื้นที่ส่วนตัวของแอป Android) ไม่มีข้อมูลใดของคลังนี้ถูกส่งมาถึงเรา เว้นแต่คุณย้ายมันเข้าบัญชีในภายหลัง",
       ],
     },
     {
-      heading: "6. ข้อมูลที่เก็บในอุปกรณ์ของคุณ",
+      heading: "7. ข้อมูลที่เก็บในอุปกรณ์ของคุณ",
       bullets: [
         "เว็บแอป: ธีม ภาษา สถานะว่าเคยดูหน้าแนะนำแล้ว และสถานะว่าปิดข้อความชวนติดตั้งแล้ว (ใน local storage) คลังข้อมูลในเครื่องที่เข้ารหัสแล้วหากคุณสร้างไว้ (ใน IndexedDB) และสำเนาไฟล์ของตัวแอปเองเพื่อให้โหลดเร็ว",
         "แอป Android: ค่าตั้งแบบเดียวกัน คลังข้อมูลในเครื่องที่เข้ารหัสแล้วหากคุณสร้างไว้ และเฉพาะเมื่อคุณเปิดการปลดล็อกด้วยชีวมาตร กุญแจที่คำนวณแล้วซึ่งเข้ารหัสด้วยกุญแจในฮาร์ดแวร์ความปลอดภัยของโทรศัพท์ และหมดอายุใน 14 วัน แอปไม่เคยเก็บ Master Password และ Secret Key และไม่เข้าร่วมการสำรองข้อมูลขึ้นคลาวด์หรือการย้ายข้อมูลข้ามเครื่องของ Android",
@@ -199,13 +222,13 @@ const privacyTh: LegalDocument = {
       paragraphs: [],
     },
     {
-      heading: "7. การป้อนอัตโนมัติบน Android กับเว็บไซต์ที่คุณบันทึกไว้",
+      heading: "8. การป้อนอัตโนมัติบน Android กับเว็บไซต์ที่คุณบันทึกไว้",
       paragraphs: [
         "เมื่อคุณใช้การป้อนอัตโนมัติในแอป Android อื่น Kunjae จะตรวจว่าแอปนั้นเป็นของเว็บไซต์ที่บันทึกไว้ในรายการจริง โดยดาวน์โหลดไฟล์สาธารณะ /.well-known/assetlinks.json ของเว็บไซต์นั้นจากโทรศัพท์ของคุณโดยตรง เว็บไซต์นั้นจะเห็นหมายเลข IP ของอุปกรณ์เหมือนการเข้าเว็บทั่วไป ไม่มีข้อมูลใดในคลังถูกส่งออกไป การป้อนอัตโนมัติในหน้าเว็บและเบราว์เซอร์ไม่มีคำขอนี้",
       ],
     },
     {
-      heading: "8. สิ่งที่เราไม่ทำ",
+      heading: "9. สิ่งที่เราไม่ทำ",
       bullets: [
         "ไม่มีโฆษณา ระบบวิเคราะห์การใช้งาน pixel ติดตาม หรือตัวติดตามของบุคคลที่สามในแอปใดของ Kunjae",
         "เราไม่ขาย ให้เช่า หรือแบ่งปันข้อมูลส่วนบุคคลของคุณเพื่อการตลาด",
@@ -214,13 +237,13 @@ const privacyTh: LegalDocument = {
       paragraphs: ["ลิงก์อย่าง \"Buy me a coffee\" หรือหน้าร้านแอปพาคุณไปยังเว็บไซต์อื่นที่มีนโยบายความเป็นส่วนตัวของตัวเอง"],
     },
     {
-      heading: "9. ผู้ให้บริการและการส่งข้อมูลไปต่างประเทศ",
+      heading: "10. ผู้ให้บริการและการส่งข้อมูลไปต่างประเทศ",
       paragraphs: [
-        "เราใช้ Cloudflare, Inc. เป็นโฮสต์ของเว็บแอปและเซิร์ฟเวอร์ซิงค์ และเป็นที่เก็บฐานข้อมูล และเมื่อเปิดการติดตามข้อผิดพลาด ใช้ Functional Software, Inc. (Sentry) ผู้ให้บริการเหล่านี้ประมวลผลข้อมูลแทนเรา และอาจประมวลผลในประเทศนอกประเทศไทย รวมถึงสหรัฐอเมริกา เราอาศัยข้อผูกพันด้านการคุ้มครองข้อมูลตามสัญญาของผู้ให้บริการ และเนื้อหาในคลังที่เก็บไว้ยังคงเข้ารหัสด้วยกุญแจที่ผู้ให้บริการไม่มี",
+        "เราใช้ Cloudflare, Inc. เป็นโฮสต์ของเว็บแอปและเซิร์ฟเวอร์ซิงค์ และเป็นที่เก็บฐานข้อมูล ใช้ Resend (Plus Five Five, Inc.) ส่งข้อความจากฟอร์มติดต่อ ใช้ Google LLC (Gmail) เป็นกล่องอีเมลฝ่ายช่วยเหลือ และเมื่อเปิดการติดตามข้อผิดพลาด ใช้ Functional Software, Inc. (Sentry) ผู้ให้บริการเหล่านี้ประมวลผลข้อมูลแทนเรา และอาจประมวลผลในประเทศนอกประเทศไทย รวมถึงสหรัฐอเมริกา เราอาศัยข้อผูกพันด้านการคุ้มครองข้อมูลตามสัญญาของผู้ให้บริการ และเนื้อหาในคลังที่เก็บไว้ยังคงเข้ารหัสด้วยกุญแจที่ผู้ให้บริการไม่มี",
       ],
     },
     {
-      heading: "10. ฐานทางกฎหมายในการประมวลผล",
+      heading: "11. ฐานทางกฎหมายในการประมวลผล",
       bullets: [
         "เพื่อให้บริการที่คุณร้องขอ ได้แก่ สร้างบัญชี ให้เข้าสู่ระบบ และซิงค์คลังที่เข้ารหัสแล้ว (การปฏิบัติตามสัญญา)",
         "เพื่อรักษาความปลอดภัย ป้องกันการใช้ในทางที่ผิด และให้บริการทำงานได้ภายในขีดจำกัด (ประโยชน์โดยชอบด้วยกฎหมาย)",
@@ -229,38 +252,47 @@ const privacyTh: LegalDocument = {
       paragraphs: [],
     },
     {
-      heading: "11. ระยะเวลาการเก็บรักษา",
+      heading: "12. ระยะเวลาการเก็บรักษา",
       paragraphs: [
-        "ข้อมูลบัญชีถูกเก็บจนกว่าคุณจะลบบัญชี การลบบัญชี (ในหน้าตั้งค่าของเว็บแอป) จะลบบัญชี vault และรายการของคุณออกจากฐานข้อมูลทันที ตัวนับเพื่อป้องกันการใช้ในทางที่ผิดถูกลบภายในประมาณ 3 วัน ข้อมูลสำรองเพื่อกู้คืนฐานข้อมูลของผู้ให้บริการโฮสต์อาจยังมีข้อมูลที่ลบแล้วอยู่ได้ไม่เกิน 30 วันก่อนถูกเขียนทับถาวร ส่วนยอดรวมการใช้งานทั้งระบบไม่มีข้อมูลส่วนบุคคลและอาจเก็บไว้โดยไม่มีกำหนด",
+        "ข้อมูลบัญชีถูกเก็บจนกว่าคุณจะลบบัญชี (ดูข้อ 13) การลบบัญชีจะลบบัญชี vault และรายการของคุณออกจากฐานข้อมูลทันที ตัวนับเพื่อป้องกันการใช้ในทางที่ผิดถูกลบภายในประมาณ 3 วัน ข้อมูลสำรองเพื่อกู้คืนฐานข้อมูลของผู้ให้บริการโฮสต์อาจยังมีข้อมูลที่ลบแล้วอยู่ได้ไม่เกิน 30 วันก่อนถูกเขียนทับถาวร ส่วนยอดรวมการใช้งานทั้งระบบไม่มีข้อมูลส่วนบุคคลและอาจเก็บไว้โดยไม่มีกำหนด",
       ],
     },
     {
-      heading: "12. สิทธิของคุณ",
+      heading: "13. การลบบัญชี",
       paragraphs: [
-        "ตาม PDPA คุณมีสิทธิขอเข้าถึง ขอรับสำเนา ขอแก้ไข หรือขอลบข้อมูลส่วนบุคคล คัดค้านหรือขอให้ระงับการประมวลผล และถอนความยินยอมในกรณีที่เราอาศัยความยินยอม คุณส่งออกข้อมูลทั้งหมดในคลังและลบบัญชีได้เองในเว็บแอปอยู่แล้ว สำหรับเรื่องอื่นให้ส่งอีเมลถึงเรา เราจะตอบภายใน 30 วัน คุณยังมีสิทธิร้องเรียนต่อสำนักงานคณะกรรมการคุ้มครองข้อมูลส่วนบุคคล",
+        "คุณลบบัญชีได้เองทุกเมื่อ โดยเข้าสู่ระบบเว็บแอป เปิดหน้าตั้งค่า แล้วเลือก \"ลบบัญชี\" บัญชี vault และรายการทั้งหมดจะถูกลบออกจากฐานข้อมูลของเราทันที",
+        "หากเข้าสู่ระบบไม่ได้ ขอลบบัญชีได้ที่ https://kunjae.pdouvch.com/delete-account หรือส่งอีเมลถึงเราจากอีเมลของบัญชีนั้น เพื่อป้องกันไม่ให้คนอื่นลบบัญชีของคุณ เราจะตอบกลับไปที่อีเมลนั้น และลบบัญชีหลังจากคุณยืนยันแล้วเท่านั้น โดยดำเนินการคำขอที่ยืนยันแล้วให้เสร็จภายใน 30 วัน",
+        "สิ่งที่ถูกลบ: ข้อมูลบัญชี (รวมอีเมลและข้อมูลสำหรับเข้าสู่ระบบ) vault และรายการทั้งหมดบนเซิร์ฟเวอร์ และตัวนับการซิงค์ที่ผูกกับบัญชี (ภายในประมาณ 3 วัน) สิ่งที่อาจยังอยู่ช่วงสั้นๆ: ข้อมูลสำรองเพื่อกู้คืนฐานข้อมูลของผู้ให้บริการโฮสต์ (ไม่เกิน 30 วัน) และอีเมลคำขอลบบัญชีของคุณ ซึ่งเก็บไว้เป็นหลักฐานว่าเราดำเนินการแล้ว",
+        "คลังที่อยู่ในอุปกรณ์ของคุณเท่านั้นไม่เคยถูกส่งมาหาเรา ลบได้ในหน้าตั้งค่าของแอป หรือล้างข้อมูลของแอป / ข้อมูลของเว็บไซต์ในเบราว์เซอร์",
+      ],
+    },
+    {
+      heading: "14. สิทธิของคุณ",
+      paragraphs: [
+        "ตาม PDPA คุณมีสิทธิขอเข้าถึง ขอรับสำเนา ขอแก้ไข หรือขอลบข้อมูลส่วนบุคคล คัดค้านหรือขอให้ระงับการประมวลผล และถอนความยินยอมในกรณีที่เราอาศัยความยินยอม คุณส่งออกข้อมูลทั้งหมดในคลังและลบบัญชีได้เองในเว็บแอปอยู่แล้ว สำหรับเรื่องอื่นให้ใช้ https://kunjae.pdouvch.com/contact หรือส่งอีเมลถึงเรา เราจะตอบภายใน 30 วัน คุณยังมีสิทธิร้องเรียนต่อสำนักงานคณะกรรมการคุ้มครองข้อมูลส่วนบุคคล",
         "เนื่องจากคลังของคุณเข้ารหัสด้วยกุญแจที่มีแต่คุณถือ เราจึงให้หรือกู้คืนเนื้อหาในคลังแทนคุณไม่ได้",
       ],
     },
     {
-      heading: "13. เด็ก",
+      heading: "15. เด็ก",
       paragraphs: [
         "Kunjae ไม่ได้มีไว้สำหรับเด็กอายุต่ำกว่า 13 ปี หากคุณอายุต่ำกว่า 20 ปี ต้องได้รับความยินยอมจากบิดามารดาหรือผู้ปกครองตามกฎหมายก่อนใช้ Kunjae หากคุณเชื่อว่าเด็กสร้างบัญชีโดยไม่ได้รับความยินยอมนั้น โปรดติดต่อเรา และเราจะลบบัญชีนั้น",
       ],
     },
     {
-      heading: "14. ความปลอดภัย",
+      heading: "16. ความปลอดภัย",
       paragraphs: [
         "เราปกป้องข้อมูลด้วยการเข้ารหัสแบบต้นทางถึงปลายทาง กุญแจที่คำนวณด้วย Argon2id การแฮชแบบมีกุญแจบนเซิร์ฟเวอร์ การเชื่อมต่อที่เข้ารหัส และการจำกัดสิทธิ์ของแอปอย่างเข้มงวด ไม่มีระบบใดปลอดภัยสมบูรณ์ โปรดเก็บ Master Password, Secret Key และอุปกรณ์ของคุณให้ปลอดภัย",
       ],
     },
     {
-      heading: "15. การเปลี่ยนแปลงนโยบาย",
+      heading: "17. การเปลี่ยนแปลงนโยบาย",
       paragraphs: [
         "เราอาจปรับปรุงนโยบายนี้ วันที่ด้านบนแสดงฉบับล่าสุด และเราจะแจ้งการเปลี่ยนแปลงสำคัญในแอปก่อนมีผลบังคับใช้",
       ],
     },
     {
-      heading: "16. ติดต่อ",
+      heading: "18. ติดต่อ",
       paragraphs: [`${LEGAL_OPERATOR} · ${LEGAL_CONTACT_EMAIL}`],
     },
   ],

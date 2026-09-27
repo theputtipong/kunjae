@@ -147,6 +147,9 @@
     <string name="section_legal">กฎหมายและนโยบาย</string>
     <string name="legal_privacy">นโยบายความเป็นส่วนตัว</string>
     <string name="legal_terms">ข้อกำหนดการใช้งาน</string>
+    <string name="legal_contact">ติดต่อเรา</string>
+    <string name="legal_delete_account">ขอลบบัญชี</string>
+    <string name="legal_delete_account_subtitle">ลบบัญชีบนเว็บ หรือส่งคำขอหากเข้าสู่ระบบไม่ได้</string>
     <string name="legal_agreement">เมื่อดำเนินการต่อ ถือว่าคุณยอมรับข้อกำหนดการใช้งานและรับทราบนโยบายความเป็นส่วนตัว ผู้ใช้ต้องมีอายุ 13 ปีขึ้นไป และหากอายุต่ำกว่า 20 ปีต้องได้รับความยินยอมจากผู้ปกครอง</string>
     <string name="about_version">เวอร์ชัน %1$s</string>
     <string name="support_title">สนับสนุน Kunjae ☕</string>

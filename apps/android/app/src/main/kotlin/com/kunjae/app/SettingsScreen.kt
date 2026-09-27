@@ -238,6 +238,19 @@ fun SettingsScreen(
                     onClick = { openLegalPage(activity, LegalPage.TERMS) },
                     trailing = { Icon(KIcons.ChevronRight, contentDescription = null) },
                 )
+                SettingsRow(
+                    KIcons.Info,
+                    stringResource(R.string.legal_contact),
+                    onClick = { openLegalPage(activity, LegalPage.CONTACT) },
+                    trailing = { Icon(KIcons.ChevronRight, contentDescription = null) },
+                )
+                SettingsRow(
+                    KIcons.Delete,
+                    stringResource(R.string.legal_delete_account),
+                    stringResource(R.string.legal_delete_account_subtitle),
+                    onClick = { openLegalPage(activity, LegalPage.DELETE_ACCOUNT) },
+                    trailing = { Icon(KIcons.ChevronRight, contentDescription = null) },
+                )
             }
         }
     }

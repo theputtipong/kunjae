@@ -152,6 +152,7 @@ export const ApiErrorCodeSchema = z.enum([
   "CONFLICT",
   "RATE_LIMITED",
   "NOT_FOUND",
+  "UNAVAILABLE",
   "INTERNAL",
 ]);
 

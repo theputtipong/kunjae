@@ -16,6 +16,7 @@ import { CreateLocalPage } from "./routes/create-local.tsx";
 import { VaultPage } from "./routes/vault.tsx";
 import { WelcomePage } from "./routes/welcome.tsx";
 import { PrivacyPage, TermsPage } from "./routes/legal.tsx";
+import { ContactPage, DeleteAccountPage } from "./routes/contact.tsx";
 import { onboardingSeen } from "./session/onboarding.ts";
 import { getLocalPresence } from "./session/local-presence.ts";
 
@@ -101,9 +102,23 @@ const termsRoute = createRoute({
   component: TermsPage,
 });
 
+const contactRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/contact",
+  component: ContactPage,
+});
+
+const deleteAccountRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/delete-account",
+  component: DeleteAccountPage,
+});
+
 export const routeTree = rootRoute.addChildren([
   privacyRoute,
   termsRoute,
+  contactRoute,
+  deleteAccountRoute,
   startRoute,
   welcomeRoute,
   unlockRoute,

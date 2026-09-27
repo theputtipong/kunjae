@@ -59,6 +59,10 @@ export const LegalLinks = () => {
       <Link to="/terms" className="hover:text-stone-900 hover:underline">
         {t.legal.terms}
       </Link>
+      <span aria-hidden="true"> · </span>
+      <Link to="/contact" className="hover:text-stone-900 hover:underline">
+        {t.nav.contact}
+      </Link>
     </>
   );
 };

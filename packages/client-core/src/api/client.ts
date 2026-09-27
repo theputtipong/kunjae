@@ -1,5 +1,6 @@
 import {
   ApiErrorResponseSchema,
+  ContactResponseSchema,
   ChangeMasterPasswordResponseSchema,
   CreateVaultResponseSchema,
   DeleteAccountResponseSchema,
@@ -10,6 +11,8 @@ import {
   SyncPullResponseSchema,
   SyncPushResponseSchema,
   type ChangeMasterPasswordRequest,
+  type ContactRequest,
+  type ContactResponse,
   type CreateVaultRequest,
   type CreateVaultResponse,
   type ChangeMasterPasswordResponse,
@@ -65,6 +68,7 @@ const PATHS = {
   revokeSessions: "/v1/auth/revoke-sessions",
   syncPull: "/v1/sync/pull",
   syncPush: "/v1/sync/push",
+  contact: "/v1/contact",
 } as const;
 
 const request = async <S extends z.ZodType>(
@@ -172,3 +176,6 @@ export const apiSyncPush = (
   body: SyncPushRequest,
   token: string,
 ): Promise<ApiResult<SyncPushResponse>> => request(PATHS.syncPush, body, SyncPushResponseSchema, token);
+
+export const apiContact = (body: ContactRequest): Promise<ApiResult<ContactResponse>> =>
+  request(PATHS.contact, body, ContactResponseSchema, undefined, 0);

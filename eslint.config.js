@@ -290,6 +290,17 @@ export default tseslint.config(
   },
 
   {
+    files: ["apps/api/src/mail/resend.ts"],
+    rules: {
+      "no-restricted-globals": [
+        "error",
+        ...FORBIDDEN_BROWSER_GLOBALS.filter((entry) => entry.name !== "fetch"),
+        ...FORBIDDEN_NODE_GLOBALS,
+      ],
+    },
+  },
+
+  {
     files: ["apps/api/src/crypto/hmac.ts"],
     rules: {
       "no-restricted-syntax": "off",

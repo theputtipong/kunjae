@@ -10,6 +10,7 @@ import { clearStore } from "@kunjae/client-core";
 import { useT } from "../i18n/index.ts";
 import { LanguageToggle, SupportLink, ThemeToggle } from "../ui/preferences.tsx";
 import { LegalLinks } from "./legal.tsx";
+import { SiteMenu } from "../ui/site-menu.tsx";
 
 export const RootLayout = () => {
   const session = useSession();
@@ -72,6 +73,7 @@ export const RootLayout = () => {
             <div className="flex items-center gap-1.5">
               <LanguageToggle />
               <ThemeToggle />
+              <SiteMenu />
             </div>
           </div>
         </div>

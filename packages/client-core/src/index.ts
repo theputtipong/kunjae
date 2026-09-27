@@ -11,6 +11,7 @@ export * from "./services/emergency-kit.ts";
 export * from "./services/sync.ts";
 export * from "./services/export-vault.ts";
 export * from "./services/vaults.ts";
+export * from "./services/contact.ts";
 export * from "./local/local-record.ts";
 export * from "./local/persistence.ts";
 export * from "./local/local-vault.ts";

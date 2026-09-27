@@ -1,5 +1,6 @@
 import {
   ChangeMasterPasswordRequestSchema,
+  ContactRequestSchema,
   CreateVaultRequestSchema,
   DeleteAccountRequestSchema,
   RevokeSessionsRequestSchema,
@@ -15,7 +16,10 @@ import { Hono } from "hono";
 import type { Context, MiddlewareHandler } from "hono";
 import type { z } from "zod";
 
+import { readContactConfig } from "../config/contact.ts";
 import { readAdminToken, readServerSecrets } from "../config/secrets.ts";
+import { touchRateLimit } from "../db/rate-limit.ts";
+import { submitContact } from "../usecases/contact.ts";
 import { createDb } from "../db/client.ts";
 import { authenticate, type Identity } from "../usecases/authenticate.ts";
 import { changeMasterPassword } from "../usecases/change-password.ts";
@@ -32,7 +36,7 @@ import { cors } from "./cors.ts";
 import { spendDailyBudget } from "../db/daily-usage.ts";
 import { underEdgeLimit, type EdgeLimiter } from "./edge-limit.ts";
 import { rateLimit } from "./rate-limit.ts";
-import { errorPayload, toErrorPayload } from "./responses.ts";
+import { errorPayload, newRequestId, toErrorPayload } from "./responses.ts";
 
 type Variables = {
   deps: Deps;
@@ -44,6 +48,12 @@ type App = { Bindings: Env; Variables: Variables };
 const MAX_BODY_BYTES = 1_048_576;
 
 const RETRY_AFTER_SECONDS = 60;
+
+const CONTACT_PER_IP = { windowSeconds: 3600, maxRequests: 5 } as const;
+
+const CONTACT_DAILY_CAP = 50;
+
+const SECONDS_PER_DAY = 86_400;
 
 const DAILY_BUDGET = { maxPulls: 500, maxChanges: 3000 } as const;
 
@@ -190,6 +200,31 @@ export const createApp = (): Hono<App> => {
     if (body === null) return badRequest(c);
 
     return respond(c, await loginFinish(c.get("deps"), body));
+  });
+
+  app.post("/v1/contact", rateLimit(CONTACT_PER_IP), async (c) => {
+    const config = readContactConfig(c.env);
+    if (config === null) {
+      const payload = errorPayload(503, "UNAVAILABLE");
+      return c.json(payload.body, payload.status);
+    }
+
+    const body = await readBody(c, ContactRequestSchema);
+    if (body === null) return badRequest(c);
+
+    const deps = c.get("deps");
+    const nowSeconds = Math.floor(deps.nowMs / 1000);
+    const day = new Date(deps.nowMs).toISOString().slice(0, 10);
+    const cap = await touchRateLimit(deps.db, `contact-daily|${day}`, nowSeconds, SECONDS_PER_DAY, CONTACT_DAILY_CAP);
+    if (!cap.ok) return internalError(c);
+    if (!cap.value.allowed) return tooMany(c);
+
+    const result = await submitContact(deps, config, body, newRequestId());
+    if (!result.ok) {
+      const payload = errorPayload(503, "UNAVAILABLE");
+      return c.json(payload.body, payload.status);
+    }
+    return c.json(result.value, 200);
   });
 
   app.post("/v1/auth/change-password", requireAuth("sensitive"), async (c) => {

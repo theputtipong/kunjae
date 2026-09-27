@@ -22,6 +22,8 @@ private const val PRODUCTION_WEB_ORIGIN = "https://kunjae.pdouvch.com"
 enum class LegalPage(val path: String) {
     PRIVACY("/privacy"),
     TERMS("/terms"),
+    CONTACT("/contact"),
+    DELETE_ACCOUNT("/delete-account"),
 }
 
 fun legalUrl(page: LegalPage): String {

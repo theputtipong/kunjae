@@ -4,7 +4,7 @@ import type { ContentfulStatusCode } from "hono/utils/http-status";
 
 import type { UseCaseError } from "../usecases/errors.ts";
 
-const newRequestId = (): string => {
+export const newRequestId = (): string => {
   const bytes = randomBytes(16);
   return bytes.ok ? bytesToBase32(bytes.value) : "0".repeat(26);
 };
