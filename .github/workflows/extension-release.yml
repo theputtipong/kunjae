@@ -21,7 +21,7 @@ concurrency:
 jobs:
   release:
     name: build · zip · ส่งออก
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     environment: extension-release
 
     steps:
@@ -74,7 +74,7 @@ jobs:
 
       - name: artifact (7 วัน)
         if: "!startsWith(github.ref, 'refs/tags/extension-v')"
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: kunjae-extension-${{ steps.version.outputs.name }}
           path: ${{ steps.files.outputs.dir }}/*.zip

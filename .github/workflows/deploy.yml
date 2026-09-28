@@ -25,7 +25,7 @@ concurrency:
 jobs:
   verify:
     name: ด่านเดิมต้องผ่านก่อนเสมอ
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
       - uses: pnpm/action-setup@v4
@@ -40,7 +40,7 @@ jobs:
     name: Worker (API)
     needs: verify
     if: inputs.target == 'api' || inputs.target == 'both'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     environment: production
     steps:
       - uses: actions/checkout@v5
@@ -79,7 +79,7 @@ jobs:
     name: หน้าเว็บ
     needs: verify
     if: inputs.target == 'web' || inputs.target == 'both'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     environment: production
     steps:
       - uses: actions/checkout@v5

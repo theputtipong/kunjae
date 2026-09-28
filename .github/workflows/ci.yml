@@ -15,7 +15,7 @@ concurrency:
 jobs:
   commits:
     name: ข้อความ commit
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
         with:
@@ -37,7 +37,7 @@ jobs:
 
   typescript:
     name: TypeScript — typecheck · lint · build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
 
@@ -59,7 +59,7 @@ jobs:
 
   audit:
     name: ตรวจช่องโหว่ของ dependency
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
       - uses: pnpm/action-setup@v4
@@ -73,7 +73,7 @@ jobs:
 
   kotlin:
     name: Kotlin — เวกเตอร์ข้ามภาษาต้องตรงกันทุกบิต
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
 
