@@ -5,6 +5,7 @@ import android.hardware.biometrics.BiometricManager
 import android.hardware.biometrics.BiometricPrompt
 import android.os.Build
 import android.os.CancellationSignal
+import androidx.annotation.RequiresApi
 import javax.crypto.Cipher
 
 object BiometricGate {
@@ -14,7 +15,11 @@ object BiometricGate {
         data class Refused(val message: String) : Outcome
     }
 
-    fun isAvailable(activity: Activity): Boolean = runCatching {
+    fun isAvailable(activity: Activity): Boolean =
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && availableOnQ(activity)
+
+    @RequiresApi(Build.VERSION_CODES.Q)
+    private fun availableOnQ(activity: Activity): Boolean = runCatching {
         val manager = activity.getSystemService(BiometricManager::class.java) ?: return false
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
@@ -27,6 +32,21 @@ object BiometricGate {
     }.getOrDefault(false)
 
     fun authenticate(
+        activity: Activity,
+        cipher: Cipher,
+        title: String,
+        subtitle: String,
+        onResult: (Outcome) -> Unit,
+    ) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+            onResult(Outcome.Refused("Biometric unlock needs Android 10 or later"))
+            return
+        }
+        authenticateOnQ(activity, cipher, title, subtitle, onResult)
+    }
+
+    @RequiresApi(Build.VERSION_CODES.Q)
+    private fun authenticateOnQ(
         activity: Activity,
         cipher: Cipher,
         title: String,

@@ -93,7 +93,7 @@ class LocalVault private constructor(
                     wrappingKey,
                     vaultId,
                     VaultMetadata(vaultName, "", ""),
-                    java.time.Instant.ofEpochMilli(nowMs).toString(),
+                    isoInstant(nowMs),
                 )
             ) {
                 is CryptoResult.Err -> { wipe(wrappingKey); return result }
@@ -392,7 +392,7 @@ class LocalVault private constructor(
                 wrappingKey,
                 vaultId,
                 VaultMetadata(name, "", ""),
-                java.time.Instant.ofEpochMilli(nowMs).toString(),
+                isoInstant(nowMs),
             )
         ) {
             is CryptoResult.Err -> return result

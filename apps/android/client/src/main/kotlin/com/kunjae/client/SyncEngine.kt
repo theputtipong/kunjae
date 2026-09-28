@@ -191,7 +191,7 @@ fun createNewVault(
             wrappingKey,
             vaultId,
             VaultMetadata(name, "", ""),
-            java.time.Instant.ofEpochMilli(nowMs).toString(),
+            isoInstant(nowMs),
         )
     }
 

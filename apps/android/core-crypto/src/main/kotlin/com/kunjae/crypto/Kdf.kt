@@ -103,11 +103,14 @@ fun deriveKeyFromPassword(
         .withIterations(params.iterations)
         .withParallelism(params.parallelism)
 
-    val generator = Argon2BytesGenerator()
-    generator.init(builder.build())
-
     val out = ByteArray(params.hashLength)
-    generator.generateBytes(password, out)
+    try {
+        val generator = Argon2BytesGenerator()
+        generator.init(builder.build())
+        generator.generateBytes(password, out)
+    } catch (_: OutOfMemoryError) {
+        return err(CryptoFailure.KEY_DERIVATION_FAILED)
+    }
 
     return ok(out)
 }

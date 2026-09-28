@@ -81,7 +81,8 @@ fun SettingsScreen(
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     LaunchedEffect(lifecycle) {
         lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
-            autofillOn = activity?.getSystemService(AutofillManager::class.java)?.hasEnabledAutofillServices() == true
+            autofillOn = Build.VERSION.SDK_INT >= Build.VERSION_CODES.P &&
+                activity?.getSystemService(AutofillManager::class.java)?.hasEnabledAutofillServices() == true
             activity?.let { model.checkRemembered(it) }
         }
     }
@@ -172,7 +173,14 @@ fun SettingsScreen(
             }
 
             SectionCard(title = stringResource(R.string.section_autofill)) {
-                SettingsRow(
+                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) {
+                    SettingsRow(
+                        KIcons.Shield,
+                        stringResource(R.string.autofill_off),
+                        stringResource(R.string.autofill_requires_android_9),
+                        enabled = false,
+                    )
+                } else SettingsRow(
                     KIcons.Shield,
                     stringResource(if (autofillOn) R.string.autofill_on else R.string.autofill_off),
                     stringResource(if (autofillOn) R.string.autofill_on_subtitle else R.string.autofill_off_subtitle),
@@ -324,11 +332,12 @@ private fun NotificationRow() {
     var on by remember { mutableStateOf(granted()) }
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { on = it }
     val openSystem = {
-        context.startActivity(
-            Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
-                .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
-        )
+        val intent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+        } else {
+            Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${context.packageName}"))
+        }
+        runCatching { context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
     }
     SettingsRow(
         KIcons.Info,
@@ -351,7 +360,10 @@ private fun BiometricRow(state: VaultViewModel.UiState, model: VaultViewModel, a
         SettingsRow(
             KIcons.Shield,
             stringResource(R.string.unlock_with_fingerprint),
-            stringResource(R.string.biometric_unavailable_subtitle),
+            stringResource(
+                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) R.string.biometric_requires_android_10
+                else R.string.biometric_unavailable_subtitle,
+            ),
             enabled = false,
         )
         return

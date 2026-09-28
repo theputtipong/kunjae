@@ -1,6 +1,7 @@
 package com.kunjae.app
 
 import android.app.Activity
+import android.os.Build
 import android.os.Bundle
 import android.text.InputType
 import android.view.View
@@ -8,6 +9,7 @@ import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
 
+@androidx.annotation.RequiresApi(Build.VERSION_CODES.O)
 class NativeLoginTestActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {

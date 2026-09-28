@@ -1,5 +1,7 @@
 package com.kunjae.app
 
+import androidx.annotation.RequiresApi
+import android.os.Build
 import android.content.Context
 import android.app.PendingIntent
 import android.app.assist.AssistStructure
@@ -24,6 +26,7 @@ import com.kunjae.client.decideAppAutofill
 import com.kunjae.client.decideAutofill
 import java.util.concurrent.Executors
 
+@RequiresApi(Build.VERSION_CODES.P)
 class KunjaeAutofillService : AutofillService() {
 
     private companion object {

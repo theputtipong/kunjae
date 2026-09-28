@@ -51,7 +51,7 @@ object SessionHolder {
         lastUsedAtMs = 0L
         ItemStore.clear()
 
-        AssetLinksVerifier.clear()
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) AssetLinksVerifier.clear()
     }
 
     @Synchronized

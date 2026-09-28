@@ -3,6 +3,7 @@ package com.kunjae.app
 import android.content.Context
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
+import android.content.pm.Signature
 import android.os.Build
 import android.os.Debug
 import java.io.File
@@ -48,20 +49,29 @@ object IntegrityGuard {
         signatureOk?.let { return it }
         val result = runCatching {
             if (allowedCerts.isEmpty()) return@runCatching false
-            val info = context.packageManager.getPackageInfo(context.packageName, PackageManager.GET_SIGNING_CERTIFICATES)
-            val signing = info.signingInfo ?: return@runCatching false
-            val signers = if (signing.hasMultipleSigners()) {
-                signing.apkContentsSigners.orEmpty().toList()
-            } else {
-                listOfNotNull(signing.signingCertificateHistory?.lastOrNull())
-            }
-            val digests = signers.map { signature ->
+            val digests = currentSigners(context).map { signature ->
                 MessageDigest.getInstance("SHA-256").digest(signature.toByteArray()).joinToString("") { "%02X".format(it) }
             }
             digests.isNotEmpty() && digests.all { it in allowedCerts }
         }.getOrDefault(false)
         signatureOk = result
         return result
+    }
+
+    private fun currentSigners(context: Context): List<Signature> {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            val info = context.packageManager.getPackageInfo(context.packageName, PackageManager.GET_SIGNING_CERTIFICATES)
+            val signing = info.signingInfo ?: return emptyList()
+            return if (signing.hasMultipleSigners()) {
+                signing.apkContentsSigners.orEmpty().toList()
+            } else {
+                listOfNotNull(signing.signingCertificateHistory?.lastOrNull())
+            }
+        }
+        @Suppress("DEPRECATION")
+        val info = context.packageManager.getPackageInfo(context.packageName, PackageManager.GET_SIGNATURES)
+        @Suppress("DEPRECATION")
+        return info.signatures.orEmpty().toList()
     }
 
     private fun tracerAttached(): Boolean = runCatching {

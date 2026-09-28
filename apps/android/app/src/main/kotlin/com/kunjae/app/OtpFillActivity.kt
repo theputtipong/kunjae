@@ -1,5 +1,7 @@
 package com.kunjae.app
 
+import androidx.annotation.RequiresApi
+import android.os.Build
 import android.content.Context
 import android.app.Activity
 import android.content.Intent
@@ -13,6 +15,7 @@ import com.kunjae.client.LoginItem
 import com.kunjae.crypto.CryptoResult
 import com.kunjae.crypto.totpFromSecretText
 
+@RequiresApi(Build.VERSION_CODES.P)
 class OtpFillActivity : Activity() {
 
     companion object {
@@ -37,7 +40,12 @@ class OtpFillActivity : Activity() {
         }
 
         val itemId = intent.getStringExtra(EXTRA_ITEM_ID)
-        val fieldId: AutofillId? = intent.getParcelableExtra(EXTRA_FIELD_ID, AutofillId::class.java)
+        val fieldId: AutofillId? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            intent.getParcelableExtra(EXTRA_FIELD_ID, AutofillId::class.java)
+        } else {
+            @Suppress("DEPRECATION")
+            intent.getParcelableExtra(EXTRA_FIELD_ID)
+        }
 
         if (itemId == null || fieldId == null) {
             finish()

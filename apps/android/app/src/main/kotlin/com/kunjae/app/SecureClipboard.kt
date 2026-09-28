@@ -35,7 +35,10 @@ object SecureClipboard {
         val clear = Runnable {
             val label = runCatching { manager.primaryClipDescription?.label }.getOrNull()
             if (label == null || label == LABEL) {
-                runCatching { manager.clearPrimaryClip() }
+                runCatching {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) manager.clearPrimaryClip()
+                    else manager.setPrimaryClip(ClipData.newPlainText(LABEL, ""))
+                }
             }
             pendingClear = null
         }

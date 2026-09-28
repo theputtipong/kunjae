@@ -1,5 +1,7 @@
 package com.kunjae.app
 
+import androidx.annotation.RequiresApi
+import android.os.Build
 import android.content.Context
 import android.content.pm.PackageManager
 import android.content.pm.Signature
@@ -10,6 +12,7 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.security.MessageDigest
 
+@RequiresApi(Build.VERSION_CODES.P)
 object AssetLinksVerifier {
 
     private const val MAX_DOCUMENT_BYTES = 128 * 1024

@@ -81,7 +81,7 @@ android {
 
     defaultConfig {
         applicationId = "com.kunjae.app"
-        minSdk = 28
+        minSdk = 24
         targetSdk = 36
         versionCode = appVersionCode
         versionName = appVersionName

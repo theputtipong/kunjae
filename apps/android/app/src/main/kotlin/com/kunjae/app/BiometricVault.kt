@@ -5,6 +5,7 @@ import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.security.keystore.StrongBoxUnavailableException
 import android.os.Build
+import androidx.annotation.RequiresApi
 import java.io.File
 import java.security.KeyStore
 import javax.crypto.Cipher
@@ -189,7 +190,11 @@ object BiometricVault {
 
     private fun existingKey(slot: Slot): SecretKey? = keyStore().getKey(slot.keyAlias, null) as? SecretKey
 
-    private fun createKey(context: Context, slot: Slot): SecretKey {
+    private fun createKey(context: Context, slot: Slot): SecretKey =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) createKeyOnP(context, slot) else generate(slot, strongBox = false)
+
+    @RequiresApi(Build.VERSION_CODES.P)
+    private fun createKeyOnP(context: Context, slot: Slot): SecretKey {
         val hasStrongBox = context.packageManager
             .hasSystemFeature(android.content.pm.PackageManager.FEATURE_STRONGBOX_KEYSTORE)
 

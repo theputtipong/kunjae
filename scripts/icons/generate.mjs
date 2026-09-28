@@ -126,4 +126,14 @@ for (const [state, deg] of [["locked", 0], ["unlocked", UNLOCKED_DEG]]) {
   }
 }
 
+const res = "apps/android/app/src/main/res";
+const densities = { mdpi: 48, hdpi: 72, xhdpi: 96, xxhdpi: 144, xxxhdpi: 192 };
+for (const [density, size] of Object.entries(densities)) {
+  out(`${res}/mipmap-${density}/ic_launcher.png`, await png(svg({ size, background: COLORS.ink, shapes: fullMark(COLORS.brassLight) })));
+  out(
+    `${res}/mipmap-${density}/ic_launcher_round.png`,
+    await png(svg({ size, ratio: 0.55, background: COLORS.ink, radius: 0.5, shapes: fullMark(COLORS.brassLight) })),
+  );
+}
+
 console.log("เสร็จ — Android (vector XML) และมาร์กในหน้าจอ แก้ด้วยมือตามตัวเลขใน mark.mjs");

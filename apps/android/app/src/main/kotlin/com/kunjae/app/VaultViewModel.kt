@@ -680,7 +680,7 @@ class VaultViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun nowIso(): String = java.time.Instant.now().toString()
+    fun nowIso(): String = com.kunjae.client.isoInstant(System.currentTimeMillis())
 
     fun updateItem(itemId: String, item: VaultItem) {
         val active = current ?: return
