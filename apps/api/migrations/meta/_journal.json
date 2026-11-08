@@ -15,6 +15,20 @@
       "when": 1789910733620,
       "tag": "0001_rate_limits",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1790352489000,
+      "tag": "0002_usage_snapshots",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1790450389000,
+      "tag": "0003_account_daily_usage",
+      "breakpoints": true
     }
   ]
 }

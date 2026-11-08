@@ -10,6 +10,8 @@ private const val HASH_LENGTH = 32
 
 private const val MAX_OKM_LENGTH = 255 * HASH_LENGTH
 
+private const val MIN_HKDF_SALT_BYTES = 16
+
 private fun hmac(key: ByteArray, message: ByteArray): ByteArray {
     val mac = Mac.getInstance(HASH_ALGORITHM)
     val material = if (key.isEmpty()) ByteArray(HASH_LENGTH) else key
@@ -25,6 +27,7 @@ fun hkdfSha256(
 ): CryptoResult<ByteArray> {
     if (length <= 0 || length > MAX_OKM_LENGTH) return err(CryptoFailure.INVALID_PARAMETER)
     if (ikm.isEmpty()) return err(CryptoFailure.INVALID_PARAMETER)
+    if (salt.size < MIN_HKDF_SALT_BYTES) return err(CryptoFailure.INVALID_PARAMETER)
 
     val prk = hmac(salt, ikm)
 

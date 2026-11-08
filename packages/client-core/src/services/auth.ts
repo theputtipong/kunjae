@@ -54,6 +54,7 @@ import {
   fromApiError,
   invalidInput,
   malformedSecretKey,
+  serviceUnavailable,
   sessionExpired,
   unexpected,
   untrustedServer,
@@ -287,7 +288,7 @@ export const refreshToken = async (): Promise<AppResult<void>> => {
   if (result === null) return err(wrongCredentials());
   if (!result.ok) {
     const mapped = fromApiError(result.error);
-    if (mapped.kind !== "Offline") lockSession();
+    if (mapped.kind === "WrongCredentials" || mapped.kind === "SessionExpired") lockSession();
     return err(mapped);
   }
 
@@ -423,7 +424,9 @@ export const changeMasterPassword = async (
           },
           token.value,
         );
-        if (!changed.ok) return err(fromApiError(changed.error));
+        if (!changed.ok) {
+          return err(changed.error.kind === "ApiRejected" && changed.error.code === "CONFLICT" ? serviceUnavailable() : fromApiError(changed.error));
+        }
 
         openSession({
           accountId: getSessionAccountId() ?? "",

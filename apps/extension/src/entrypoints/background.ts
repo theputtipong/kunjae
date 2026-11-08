@@ -14,7 +14,10 @@ import {
   getSessionView,
   getStoreView,
   hasLocalVault,
+  IDLE_TIMEOUT_MS,
+  idleMs,
   lockSession,
+  markActivity,
   migrateLocalToAccount,
   pull,
   saveItem,
@@ -24,16 +27,17 @@ import {
   unlockLocal,
   type AppError,
 } from "@kunjae/client-core";
-import { emptyLoginItem } from "@kunjae/domain";
+import { emptyLoginItem, loginTotpCode } from "@kunjae/domain";
 import { browser, defineBackground } from "#imports";
 
-import { totpFromSecretText } from "@kunjae/core-crypto";
 
 import { apiBaseUrl } from "../config.ts";
-import { decideFill, hostOf } from "../origin.ts";
+import { decideFill, hostOf, normalizeWebsite } from "../origin.ts";
+import { startIdleLock } from "../idle-lock.ts";
 import { fillCredentials, fillOtpCode } from "../fill-form.ts";
 import {
   RequestSchema,
+  requiresUnlockedSession,
   type ErrorCode,
   type ItemBrief,
   type LocalBrief,
@@ -61,6 +65,8 @@ const codeFor = (error: AppError, fallback: ErrorCode): ErrorCode => {
       return "session-expired";
     case "Offline":
       return "offline";
+    case "InvalidInput":
+      return "invalid-input";
     default:
       return fallback;
   }
@@ -162,7 +168,7 @@ const handleFillTotp = async (itemId: string): Promise<Response> => {
       : fail("totp-fill-unavailable");
   }
 
-  const computed = totpFromSecretText(content.totpSecret, Date.now());
+  const computed = loginTotpCode(content, Date.now());
   if (!computed.ok) return fail("totp-unreadable");
 
   let results: { readonly result?: unknown }[];
@@ -198,9 +204,41 @@ const updateActionIcon = (): void => {
   void browser.action.setTitle({ title });
 };
 
+const IDLE_CHECK_INTERVAL_MS = 10_000;
+const CLIPBOARD_CLEAR_MS = 30_000;
+
+let clipboardTimer: ReturnType<typeof setTimeout> | null = null;
+
+const scheduleClipboardClear = (): void => {
+  if (typeof document === "undefined" || !("clipboard" in navigator)) return;
+
+  if (clipboardTimer !== null) clearTimeout(clipboardTimer);
+  clipboardTimer = setTimeout(() => {
+    clipboardTimer = null;
+    navigator.clipboard.writeText("").catch(() => undefined);
+  }, CLIPBOARD_CLEAR_MS);
+};
+
+const lockAndForget = (): void => {
+  lockSession();
+  clearStore();
+};
+
+const onSessionChange = (): void => {
+  if (getSessionView().status !== "unlocked") clearStore();
+  updateActionIcon();
+};
+
 const handle = async (request: unknown): Promise<Response> => {
   const parsed = RequestSchema.safeParse(request);
   if (!parsed.success) return fail("invalid-request");
+
+  markActivity(Date.now());
+
+  if (requiresUnlockedSession(parsed.data.kind) && getSessionView().status !== "unlocked") {
+    clearStore();
+    return fail("session-expired");
+  }
 
   switch (parsed.data.kind) {
     case "status": {
@@ -303,8 +341,12 @@ const handle = async (request: unknown): Promise<Response> => {
     }
 
     case "lock": {
-      lockSession();
-      clearStore();
+      lockAndForget();
+      return { ok: true, kind: "done" };
+    }
+
+    case "clear-clipboard-later": {
+      scheduleClipboardClear();
       return { ok: true, kind: "done" };
     }
 
@@ -323,7 +365,7 @@ const handle = async (request: unknown): Promise<Response> => {
         return fail("no-totp");
       }
 
-      const result = totpFromSecretText(content.totpSecret, Date.now());
+      const result = loginTotpCode(content, Date.now());
       if (!result.ok) return fail("totp-unreadable");
 
       return {
@@ -378,6 +420,9 @@ const handleSave = async (params: {
     return fail("item-not-found");
   }
 
+  const url = normalizeWebsite(params.url);
+  if (url === null) return fail("invalid-url");
+
   const base = existing?.type === "login" ? existing : emptyLoginItem(params.title, now);
 
   const content = {
@@ -385,7 +430,7 @@ const handleSave = async (params: {
     title: params.title,
     username: params.username,
     password: params.password,
-    urls: params.url === "" ? [] : [params.url],
+    urls: url === "" ? [] : [url],
     totpSecret: params.totpSecret,
     updatedAt: now,
   };
@@ -420,7 +465,15 @@ export default defineBackground(() => {
   configureLocalPersistence(createIndexedDbPersistence(indexedDB));
 
   updateActionIcon();
-  subscribeToSession(updateActionIcon);
+  subscribeToSession(onSessionChange);
+
+  startIdleLock({
+    now: Date.now,
+    idleMs,
+    lock: lockAndForget,
+    timeoutMs: IDLE_TIMEOUT_MS,
+    intervalMs: IDLE_CHECK_INTERVAL_MS,
+  });
 
   browser.runtime.onInstalled.addListener(({ reason }) => {
     if (reason === "install") {

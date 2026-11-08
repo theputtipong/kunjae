@@ -19,12 +19,14 @@ import com.kunjae.client.createNewVault
 import com.kunjae.client.createUlid
 import com.kunjae.client.deleteItem
 import com.kunjae.client.generatePassword
+import com.kunjae.client.loginTotpCode
 import com.kunjae.client.pull
 import com.kunjae.client.saveItem
 import com.kunjae.crypto.CryptoResult
 import com.kunjae.crypto.TotpCode
-import com.kunjae.crypto.totpFromSecretText
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -76,6 +78,8 @@ class VaultViewModel(application: Application) : AndroidViewModel(application) {
 
     private val current: VaultSession? get() = SessionHolder.active()
 
+    private val viewing: VaultSession? get() = SessionHolder.peek()
+
     private val session: Session? get() = (current as? VaultSession.Account)?.session
 
     private val localStore = LocalVaultFile(application)
@@ -89,8 +93,33 @@ class VaultViewModel(application: Application) : AndroidViewModel(application) {
 
     private var onChange: (() -> Unit)? = null
 
+    init {
+        viewModelScope.launch {
+            SessionHolder.unlocked.collect { open ->
+                if (!open && uiState.unlocked) lock()
+            }
+        }
+        viewModelScope.launch {
+            SessionHolder.unlocked.collectLatest { open ->
+                if (open) runIdleTimer()
+            }
+        }
+    }
+
+    private suspend fun runIdleTimer() {
+        while (true) {
+            val remaining = SessionHolder.idleRemainingMs() ?: return
+            delay(remaining.coerceAtLeast(0L) + 1L)
+            if (SessionHolder.peek() == null) return
+        }
+    }
+
     fun observe(listener: () -> Unit) {
         onChange = listener
+    }
+
+    fun enforceIdleLock() {
+        if (uiState.unlocked && viewing == null) lock()
     }
 
     fun checkRemembered(context: Context) {
@@ -509,6 +538,15 @@ class VaultViewModel(application: Application) : AndroidViewModel(application) {
 
         val pulled = withContext(Dispatchers.IO) { loadState(active) }
 
+        when (pullOutcome(active, SessionHolder.peek())) {
+            PullOutcome.APPLY -> Unit
+            PullOutcome.LOCK -> {
+                lock()
+                return
+            }
+            PullOutcome.DISCARD -> return
+        }
+
         when (pulled) {
             is CryptoResult.Err -> update(
                 uiState.copy(
@@ -566,7 +604,7 @@ class VaultViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun revealSecret(itemId: String): RevealedItem? = when (val item = itemAt(itemId)?.item) {
+    fun revealSecret(itemId: String): RevealedItem? = when (val item = current?.let { itemAt(itemId) }?.item) {
         null -> null
 
         is LoginItem -> RevealedItem(R.string.label_password, item.password)
@@ -586,7 +624,7 @@ class VaultViewModel(application: Application) : AndroidViewModel(application) {
         val login = itemAt(itemId)?.item as? LoginItem ?: return null
         if (login.totpSecret.isBlank()) return null
 
-        return when (val code = totpFromSecretText(login.totpSecret, nowMs)) {
+        return when (val code = loginTotpCode(login, nowMs)) {
             is CryptoResult.Err -> null
             is CryptoResult.Ok -> code.value
         }
@@ -615,7 +653,7 @@ class VaultViewModel(application: Application) : AndroidViewModel(application) {
         is CardItem -> item.number.takeLast(4)
     }
 
-    fun itemAt(itemId: String): DecryptedItem? = state?.items?.get(itemId)
+    fun itemAt(itemId: String): DecryptedItem? = viewing?.let { state?.items?.get(itemId) }
 
     fun suggestPassword(): String? = when (val generated = generatePassword(PasswordOptions())) {
         is CryptoResult.Err -> null

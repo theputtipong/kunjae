@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { browser } from "#imports";
 
-import type { ItemBrief, LocalBrief } from "../../messaging.ts";
+import type { ErrorResponse, ItemBrief, LocalBrief } from "../../messaging.ts";
 import { send } from "../../send.ts";
 import { KunjaeMark } from "../../kunjae-mark.tsx";
 import { describeError, dictionary } from "../../i18n.ts";
@@ -175,25 +175,37 @@ export const Popup = () => {
     void send({ kind: "local-dismiss-migration" }).then(refresh, refresh);
   };
 
+  const showFailure = (result: ErrorResponse): void => {
+    setMessage(describeError(t, result));
+    if (result.error === "session-expired") refresh();
+  };
+
+  const copyToClipboard = async (value: string): Promise<void> => {
+    await navigator.clipboard.writeText(value);
+    void send({ kind: "clear-clipboard-later" });
+  };
+
   const copyPassword = async (itemId: string): Promise<void> => {
     const result = await send({ kind: "reveal", itemId });
     if (!result.ok || result.kind !== "reveal") {
-      setMessage(result.ok ? t.passwordMissing : describeError(t, result));
+      if (result.ok) setMessage(t.passwordMissing);
+      else showFailure(result);
       return;
     }
 
-    await navigator.clipboard.writeText(result.password);
+    await copyToClipboard(result.password);
     setMessage(t.copied);
   };
 
   const copyTotp = async (itemId: string): Promise<void> => {
     const result = await send({ kind: "totp", itemId });
     if (!result.ok || result.kind !== "totp") {
-      setMessage(result.ok ? t.codeFailed : describeError(t, result));
+      if (result.ok) setMessage(t.codeFailed);
+      else showFailure(result);
       return;
     }
 
-    await navigator.clipboard.writeText(result.code);
+    await copyToClipboard(result.code);
     setMessage(t.totpCopied(result.secondsRemaining));
   };
 
@@ -205,7 +217,8 @@ export const Popup = () => {
 
     const result = await send({ kind: "load-for-edit", itemId });
     if (!result.ok || result.kind !== "editable") {
-      setMessage(result.ok ? t.loadFailed : describeError(t, result));
+      if (result.ok) setMessage(t.loadFailed);
+      else showFailure(result);
       return;
     }
 
@@ -231,7 +244,7 @@ export const Popup = () => {
     setBusy(false);
 
     if (!result.ok) {
-      setMessage(describeError(t, result));
+      showFailure(result);
       return;
     }
 
@@ -242,12 +255,14 @@ export const Popup = () => {
 
   const fillTotp = async (itemId: string): Promise<void> => {
     const result = await send({ kind: "fill-totp", itemId });
-    setMessage(result.ok ? t.totpFilled : describeError(t, result));
+    if (result.ok) setMessage(t.totpFilled);
+    else showFailure(result);
   };
 
   const fill = async (itemId: string): Promise<void> => {
     const result = await send({ kind: "fill", itemId });
-    setMessage(result.ok ? t.filled : describeError(t, result));
+    if (result.ok) setMessage(t.filled);
+    else showFailure(result);
   };
 
   const header = (

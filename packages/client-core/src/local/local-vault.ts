@@ -11,7 +11,7 @@ import {
   wrapVaultKey,
   type WrappingKey,
 } from "@kunjae/core-crypto";
-import { createVault as createVaultContent, type DecryptedItem } from "@kunjae/domain";
+import { createVault as createVaultContent } from "@kunjae/domain";
 
 import { createUlid } from "../lib/ulid.ts";
 import {
@@ -21,7 +21,7 @@ import {
   openLocalSession,
   replaceLocalWrappingKey,
 } from "../session/vault-session.ts";
-import { clearStore, getDefaultVaultId, upsertVault } from "../store/vault-store.ts";
+import { clearStore, getItemRef, getStoreView, upsertVault } from "../store/vault-store.ts";
 import {
   accountRequired,
   invalidInput,
@@ -31,10 +31,12 @@ import {
   sessionExpired,
   unexpected,
   wrongDevicePassword,
+  type AppError,
   type AppResult,
   type MessageLang,
 } from "../services/errors.ts";
-import { saveItem } from "../services/sync.ts";
+import { pull, pushNewItems, type NewItem } from "../services/sync.ts";
+import { createNewVault } from "../services/vaults.ts";
 import { LOCAL_RECORD_FORMAT, type LocalRecord, type LocalVaultEntry } from "./local-record.ts";
 import {
   clearLocalRecord,
@@ -308,12 +310,16 @@ export type MigrateLocalResult = {
   readonly cleared: boolean;
 };
 
+const accountVaultFor = async (name: string, nowMs: number): Promise<AppResult<string>> => {
+  const existing = getStoreView().vaults.find((vault) => vault.name === name);
+  if (existing !== undefined) return ok(existing.vaultId);
+
+  return createNewVault({ name, nowMs });
+};
+
 export const migrateLocalToAccount = (params: MigrateLocalParams): Promise<AppResult<MigrateLocalResult>> =>
   serializeLocal(async () => {
     if (getSessionMode() !== "account") return err(accountRequired());
-
-    const targetVaultId = params.targetVaultId ?? getDefaultVaultId();
-    if (targetVaultId === null) return err(unexpected());
 
     if (params.devicePassword.length === 0) return err(wrongDevicePassword());
 
@@ -330,37 +336,60 @@ export const migrateLocalToAccount = (params: MigrateLocalParams): Promise<AppRe
     });
     if (!vaults.ok) return vaults;
 
+    const synced = await pull(params.nowMs);
+    if (!synced.ok) return synced;
+
     const opened = await openLocalItems(vaults.value, record);
 
-    const items: DecryptedItem[] = [];
+    const itemsByVault = new Map<string, NewItem[]>();
     let failed = 0;
     for (const { result } of opened) {
-      if (result?.ok === true) items.push(result.value);
-      else failed += 1;
-    }
-
-    const movedIds = new Set<string>();
-
-    for (const [index, item] of items.entries()) {
-      const newId = createUlid(params.nowMs + index);
-      if (!newId.ok) {
+      if (result?.ok !== true) {
         failed += 1;
         continue;
       }
-
-      const saved = await saveItem({
-        itemId: newId.value,
-        vaultId: targetVaultId,
-        content: item.content,
-        baseVersion: 0,
-        nowMs: params.nowMs,
-      });
-
-      if (saved.ok) movedIds.add(item.itemId);
-      else failed += 1;
+      const group = itemsByVault.get(result.value.vaultId) ?? [];
+      group.push({ itemId: result.value.itemId, content: result.value.content });
+      itemsByVault.set(result.value.vaultId, group);
     }
 
-    if (failed === 0) {
+    const movedIds = new Set<string>();
+    let error: AppError | null = null;
+
+    for (const vault of vaults.value) {
+      const items = itemsByVault.get(vault.vaultId) ?? [];
+
+      if (error !== null) {
+        failed += items.length;
+        continue;
+      }
+
+      const pending: NewItem[] = [];
+      for (const item of items) {
+        if (getItemRef(item.itemId) === null) pending.push(item);
+        else movedIds.add(item.itemId);
+      }
+
+      const target =
+        params.targetVaultId === undefined
+          ? await accountVaultFor(vault.metadata.name, params.nowMs)
+          : ok(params.targetVaultId);
+      if (!target.ok) {
+        error = target.error;
+        failed += pending.length;
+        continue;
+      }
+      if (pending.length === 0) continue;
+
+      const outcome = await pushNewItems(target.value, pending, params.nowMs);
+      for (const id of [...outcome.savedIds, ...outcome.conflictedIds]) movedIds.add(id);
+      failed += outcome.failedIds.length;
+      error = outcome.error;
+    }
+
+    if (error !== null && movedIds.size === 0) return err(error);
+
+    if (failed === 0 && movedIds.size === record.items.length) {
       const cleared = await clearLocalRecord();
       return ok({ moved: movedIds.size, failed, cleared: cleared.ok });
     }

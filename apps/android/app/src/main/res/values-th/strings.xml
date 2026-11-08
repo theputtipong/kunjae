@@ -117,6 +117,12 @@
     <string name="edit_new_title">รายการใหม่</string>
     <string name="edit_title">แก้ไขรายการ</string>
     <string name="edit_target_vault">จะบันทึกลง vault: %1$s — เปลี่ยนได้จากตัวเลือก vault ในหน้ารายการ</string>
+    <string name="edit_invalid">บันทึกไม่ได้ เพราะบางช่องไม่ถูกต้อง แก้ช่องที่ขึ้นสีแดงแล้วลองอีกครั้ง</string>
+    <string name="edit_too_large">รายการนี้ใหญ่เกินกว่าจะบันทึกได้ ลองตัดโน้ตหรือช่องอื่นให้สั้นลง</string>
+    <string name="edit_too_long">ยาวเกินไป ใส่ได้ไม่เกิน %1$d ตัวอักษร</string>
+    <string name="edit_totp_invalid">ความลับ TOTP หรือลิงก์ otpauth:// ไม่ถูกต้อง (ไม่เกิน %1$d ตัวอักษร)</string>
+    <string name="edit_month_invalid">ใส่เดือน 01 ถึง 12</string>
+    <string name="edit_year_invalid">ใส่ปี ค.ศ. 4 หลัก</string>
     <string name="label_item_title">ชื่อรายการ</string>
     <string name="cd_generate_password">สร้างรหัสผ่านให้</string>
     <string name="password_generate_hint">กดไอคอนลูกศรวนเพื่อสร้างรหัสผ่านที่แข็งแรง</string>

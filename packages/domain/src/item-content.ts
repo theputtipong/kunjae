@@ -5,6 +5,7 @@ import {
   fromThrowable,
   invalidFormat,
   ok,
+  TOTP_ALGORITHMS,
   utf8ToBytes,
   bytesToUtf8,
   type Bytes,
@@ -18,7 +19,12 @@ export type ItemContentTooLarge = {
   readonly actualBytes: number;
 };
 
-export type DomainError = CryptoError | ItemContentTooLarge;
+export type ItemContentInvalid = {
+  readonly kind: "ItemContentInvalid";
+  readonly fields: readonly string[];
+};
+
+export type DomainError = CryptoError | ItemContentTooLarge | ItemContentInvalid;
 
 export type DomainResult<T> = Result<T, DomainError>;
 
@@ -37,6 +43,10 @@ export const FIELD_LIMITS = {
   customFieldValue: 2048,
   customFieldCount: 48,
   totpSecret: 256,
+  totpDigitsMin: 6,
+  totpDigitsMax: 8,
+  totpPeriodMin: 15,
+  totpPeriodMax: 300,
   cardNumber: 32,
   cardholderName: 200,
 } as const;
@@ -66,6 +76,9 @@ export const LoginItemSchema = z.strictObject({
   password: z.string().max(FIELD_LIMITS.password),
   urls: z.array(z.string().min(1).max(FIELD_LIMITS.url)).max(FIELD_LIMITS.urlCount).readonly(),
   totpSecret: z.string().max(FIELD_LIMITS.totpSecret),
+  totpAlgorithm: z.enum(TOTP_ALGORITHMS).optional(),
+  totpDigits: z.int().min(FIELD_LIMITS.totpDigitsMin).max(FIELD_LIMITS.totpDigitsMax).optional(),
+  totpPeriod: z.int().min(FIELD_LIMITS.totpPeriodMin).max(FIELD_LIMITS.totpPeriodMax).optional(),
 });
 
 export const SecureNoteItemSchema = z.strictObject({
@@ -96,6 +109,14 @@ export type CardItem = z.infer<typeof CardItemSchema>;
 
 export const ITEM_TYPES = ["login", "secure-note", "card"] as const;
 export type ItemType = (typeof ITEM_TYPES)[number];
+
+export const validateItemContent = (content: unknown): DomainResult<ItemContent> => {
+  const validated = ItemContentSchema.safeParse(content);
+  if (validated.success) return ok(validated.data);
+
+  const fields = [...new Set(validated.error.issues.map((issue) => issue.path.map(String).join(".")))];
+  return err({ kind: "ItemContentInvalid", fields });
+};
 
 export const encodeItemContent = (content: ItemContent): DomainResult<Bytes> => {
   const json = fromThrowable(

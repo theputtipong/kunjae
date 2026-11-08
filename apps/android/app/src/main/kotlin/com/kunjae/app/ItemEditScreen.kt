@@ -38,9 +38,12 @@ import androidx.compose.ui.unit.dp
 import com.kunjae.app.ui.KIcons
 import com.kunjae.app.ui.iconForType
 import com.kunjae.client.CardItem
+import com.kunjae.client.ItemLimits
 import com.kunjae.client.LoginItem
 import com.kunjae.client.SecureNoteItem
 import com.kunjae.client.VaultItem
+import com.kunjae.client.invalidItemFields
+import com.kunjae.client.normalizeItemTotp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -70,6 +73,8 @@ fun ItemEditScreen(
     var month by remember(itemId) { mutableStateOf(card?.expiryMonth ?: "") }
     var year by remember(itemId) { mutableStateOf(card?.expiryYear ?: "") }
     var cvc by remember(itemId) { mutableStateOf(card?.securityCode ?: "") }
+
+    var invalid by remember(itemId) { mutableStateOf(emptyList<String>()) }
 
     val clearSecrets = {
         password = ""
@@ -124,7 +129,21 @@ fun ItemEditScreen(
                 customFields = existing?.customFields ?: emptyList(),
                 createdAt = createdAt,
                 updatedAt = now,
+                totpAlgorithm = login?.totpAlgorithm,
+                totpDigits = login?.totpDigits,
+                totpPeriod = login?.totpPeriod,
             )
+        }.let { built ->
+            normalizeItemTotp(built) ?: run {
+                invalid = listOf("totpSecret")
+                return@save
+            }
+        }
+
+        val issues = invalidItemFields(item)
+        if (issues.isNotEmpty()) {
+            invalid = issues
+            return@save
         }
 
         if (itemId == null) model.createItem(item) else model.updateItem(itemId, item)
@@ -152,6 +171,14 @@ fun ItemEditScreen(
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+            if (invalid.isNotEmpty()) {
+                Text(
+                    stringResource(if ("content" in invalid) R.string.edit_too_large else R.string.edit_invalid),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.error,
+                )
+            }
+
             if (itemId == null) {
                 SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
                     ITEM_TYPE_CHOICES.forEachIndexed { i, (name, label) ->
@@ -177,7 +204,12 @@ fun ItemEditScreen(
 
             OutlinedTextField(
                 value = title,
-                onValueChange = { title = it },
+                onValueChange = {
+                    title = it
+                    invalid = invalid - "title"
+                },
+                isError = "title" in invalid,
+                supportingText = issueText(invalid, "title", ItemLimits.TITLE),
                 label = { Text(stringResource(R.string.label_item_title)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
@@ -186,7 +218,12 @@ fun ItemEditScreen(
             if (typeName == "login") {
                 OutlinedTextField(
                     value = username,
-                    onValueChange = { username = it },
+                    onValueChange = {
+                        username = it
+                        invalid = invalid - "username"
+                    },
+                    isError = "username" in invalid,
+                    supportingText = issueText(invalid, "username", ItemLimits.USERNAME),
                     label = { Text(stringResource(R.string.label_username)) },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
@@ -194,7 +231,11 @@ fun ItemEditScreen(
                 )
                 OutlinedTextField(
                     value = password,
-                    onValueChange = { password = it },
+                    onValueChange = {
+                        password = it
+                        invalid = invalid - "password"
+                    },
+                    isError = "password" in invalid,
                     label = { Text(stringResource(R.string.label_password)) },
                     singleLine = true,
                     visualTransformation = if (showPassword) VisualTransformation.None else PasswordVisualTransformation(),
@@ -212,24 +253,35 @@ fun ItemEditScreen(
                             }
                         }
                     },
-                    supportingText = { Text(stringResource(R.string.password_generate_hint)) },
+                    supportingText = issueText(invalid, "password", ItemLimits.PASSWORD)
+                        ?: { Text(stringResource(R.string.password_generate_hint)) },
                     modifier = Modifier.fillMaxWidth(),
                 )
                 OutlinedTextField(
                     value = url,
-                    onValueChange = { url = it },
+                    onValueChange = {
+                        url = it
+                        invalid = invalid - "urls.0"
+                    },
+                    isError = "urls.0" in invalid,
                     label = { Text(stringResource(R.string.label_website)) },
                     placeholder = { Text("github.com") },
-                    supportingText = { Text(stringResource(R.string.website_hint)) },
+                    supportingText = issueText(invalid, "urls.0", ItemLimits.URL)
+                        ?: { Text(stringResource(R.string.website_hint)) },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
                     modifier = Modifier.fillMaxWidth(),
                 )
                 OutlinedTextField(
                     value = totpSecret,
-                    onValueChange = { totpSecret = it },
+                    onValueChange = {
+                        totpSecret = it
+                        invalid = invalid - "totpSecret"
+                    },
+                    isError = "totpSecret" in invalid,
                     label = { Text(stringResource(R.string.label_totp_secret)) },
-                    supportingText = { Text(stringResource(R.string.totp_secret_hint)) },
+                    supportingText = issueText(invalid, "totpSecret", ItemLimits.TOTP_SECRET)
+                        ?: { Text(stringResource(R.string.totp_secret_hint)) },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, autoCorrectEnabled = false),
                     modifier = Modifier.fillMaxWidth(),
@@ -239,14 +291,24 @@ fun ItemEditScreen(
             if (typeName == "card") {
                 OutlinedTextField(
                     value = holder,
-                    onValueChange = { holder = it },
+                    onValueChange = {
+                        holder = it
+                        invalid = invalid - "cardholderName"
+                    },
+                    isError = "cardholderName" in invalid,
+                    supportingText = issueText(invalid, "cardholderName", ItemLimits.CARDHOLDER_NAME),
                     label = { Text(stringResource(R.string.label_cardholder)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
                 OutlinedTextField(
                     value = number,
-                    onValueChange = { number = it },
+                    onValueChange = {
+                        number = it
+                        invalid = invalid - "number"
+                    },
+                    isError = "number" in invalid,
+                    supportingText = issueText(invalid, "number", ItemLimits.CARD_NUMBER),
                     label = { Text(stringResource(R.string.label_card_number)) },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -255,7 +317,12 @@ fun ItemEditScreen(
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(
                         value = month,
-                        onValueChange = { month = it },
+                        onValueChange = {
+                            month = it
+                            invalid = invalid - "expiryMonth"
+                        },
+                        isError = "expiryMonth" in invalid,
+                        supportingText = issueText(invalid, "expiryMonth", 0),
                         label = { Text(stringResource(R.string.label_month)) },
                         placeholder = { Text("MM") },
                         singleLine = true,
@@ -264,7 +331,12 @@ fun ItemEditScreen(
                     )
                     OutlinedTextField(
                         value = year,
-                        onValueChange = { year = it },
+                        onValueChange = {
+                            year = it
+                            invalid = invalid - "expiryYear"
+                        },
+                        isError = "expiryYear" in invalid,
+                        supportingText = issueText(invalid, "expiryYear", 0),
                         label = { Text(stringResource(R.string.label_year)) },
                         placeholder = { Text("YYYY") },
                         singleLine = true,
@@ -273,7 +345,12 @@ fun ItemEditScreen(
                     )
                     OutlinedTextField(
                         value = cvc,
-                        onValueChange = { cvc = it },
+                        onValueChange = {
+                            cvc = it
+                            invalid = invalid - "securityCode"
+                        },
+                        isError = "securityCode" in invalid,
+                        supportingText = issueText(invalid, "securityCode", ItemLimits.SECURITY_CODE),
                         label = { Text("CVC") },
                         singleLine = true,
                         visualTransformation = PasswordVisualTransformation(),
@@ -285,11 +362,30 @@ fun ItemEditScreen(
 
             OutlinedTextField(
                 value = notes,
-                onValueChange = { notes = it },
+                onValueChange = {
+                    notes = it
+                    invalid = invalid - "notes"
+                },
+                isError = "notes" in invalid,
+                supportingText = issueText(invalid, "notes", ItemLimits.NOTES),
                 label = { Text(stringResource(if (typeName == "secure-note") R.string.section_content else R.string.section_notes)) },
                 minLines = if (typeName == "secure-note") 6 else 3,
                 modifier = Modifier.fillMaxWidth(),
             )
         }
+    }
+}
+
+private fun issueText(invalid: List<String>, path: String, limit: Int): (@Composable () -> Unit)? {
+    if (path !in invalid) return null
+    return {
+        Text(
+            when (path) {
+                "expiryMonth" -> stringResource(R.string.edit_month_invalid)
+                "expiryYear" -> stringResource(R.string.edit_year_invalid)
+                "totpSecret" -> stringResource(R.string.edit_totp_invalid, limit)
+                else -> stringResource(R.string.edit_too_long, limit)
+            },
+        )
     }
 }

@@ -9,9 +9,11 @@ import { buildItemAad, type ItemChange, type ItemRecord } from "@kunjae/contract
 import {
   decodeItemContent,
   encodeItemContent,
+  validateItemContent,
   type DomainResult,
   type ItemContent,
 } from "./item-content.ts";
+import { normalizeItemContent } from "./totp.ts";
 
 export type DecryptedItem = {
   readonly itemId: string;
@@ -44,7 +46,13 @@ const sealContent = async (
   version: number,
   content: ItemContent,
 ) => {
-  const bytes = encodeItemContent(content);
+  const normalized = normalizeItemContent(content);
+  if (!normalized.ok) return normalized;
+
+  const validated = validateItemContent(normalized.value);
+  if (!validated.ok) return validated;
+
+  const bytes = encodeItemContent(validated.value);
   if (!bytes.ok) return bytes;
 
   const aad = itemAadBytes(itemId, version);

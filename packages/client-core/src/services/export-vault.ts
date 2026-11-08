@@ -250,27 +250,35 @@ const fingerprintOf = (content: ItemContent): string => {
   return [content.type, content.title, username, password].join(FIELD_SEPARATOR);
 };
 
+const parseJsonObject = (text: string): Record<string, unknown> | null => {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    return null;
+  }
+
+  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) return null;
+  return parsed as Record<string, unknown>;
+};
+
 export const importVaultExport = async (
   params: ImportParams,
 ): Promise<AppResult<ImportResult>> => {
-  let plain = params.document;
+  const parsedDocument = parseJsonObject(params.document);
+  if (parsedDocument === null) return err(invalidInput("exportFile"));
 
-  if (params.document.includes("kunjae.export.encrypted")) {
+  let record = parsedDocument;
+
+  if (record["format"] === "kunjae.export.encrypted") {
     const opened = await decryptExport(params.document, params.password);
     if (!opened.ok) return err(invalidInput("exportPassword"));
-    plain = opened.value;
+
+    const inner = parseJsonObject(opened.value);
+    if (inner === null) return err(invalidInput("exportFile"));
+    record = inner;
   }
 
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(plain);
-  } catch {
-    return err(invalidInput("exportFile"));
-  }
-
-  if (typeof parsed !== "object" || parsed === null) return err(invalidInput("exportFile"));
-
-  const record = parsed as Record<string, unknown>;
   if (record["format"] !== "kunjae.export") return err(invalidInput("exportFile"));
 
   const rawItems = record["items"];

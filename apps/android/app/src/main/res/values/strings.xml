@@ -122,6 +122,12 @@
     <string name="edit_new_title">New item</string>
     <string name="edit_title">Edit item</string>
     <string name="edit_target_vault">Saving to vault: %1$s. You can change it with the vault picker on the item list.</string>
+    <string name="edit_invalid">Some fields can\'t be saved. Fix the highlighted fields and try again.</string>
+    <string name="edit_too_large">This item is too large to save. Shorten the notes or other fields.</string>
+    <string name="edit_too_long">Too long. Use at most %1$d characters.</string>
+    <string name="edit_totp_invalid">Not a valid TOTP secret or otpauth:// link (at most %1$d characters)</string>
+    <string name="edit_month_invalid">Use a month from 01 to 12</string>
+    <string name="edit_year_invalid">Use a 4-digit year</string>
     <string name="label_item_title">Title</string>
     <string name="cd_generate_password">Generate a password</string>
     <string name="password_generate_hint">Tap the circular arrow to generate a strong password</string>

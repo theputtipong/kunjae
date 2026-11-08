@@ -47,6 +47,9 @@ data class LoginItem(
     override val customFields: List<CustomField> = emptyList(),
     override val createdAt: String,
     override val updatedAt: String,
+    val totpAlgorithm: String? = null,
+    val totpDigits: Int? = null,
+    val totpPeriod: Int? = null,
 ) : VaultItem {
     override fun toString(): String = "LoginItem(***)"
     override val typeName: String get() = "login"
@@ -112,6 +115,11 @@ fun itemToJson(item: VaultItem): JSONObject {
             .put("password", item.password)
             .put("urls", item.urls.fold(JSONArray()) { acc, url -> acc.put(url) })
             .put("totpSecret", item.totpSecret)
+            .apply {
+                item.totpAlgorithm?.let { put("totpAlgorithm", it) }
+                item.totpDigits?.let { put("totpDigits", it) }
+                item.totpPeriod?.let { put("totpPeriod", it) }
+            }
 
         is SecureNoteItem -> json
 
@@ -122,6 +130,16 @@ fun itemToJson(item: VaultItem): JSONObject {
             .put("expiryYear", item.expiryYear)
             .put("securityCode", item.securityCode)
     }
+}
+
+private const val INVALID_ALGORITHM = "?"
+private const val INVALID_NUMBER = -1
+
+private fun optionalInt(json: JSONObject, key: String): Int? {
+    if (!json.has(key)) return null
+    val number = json.opt(key) as? Number ?: return INVALID_NUMBER
+    val value = number.toDouble()
+    return if (value % 1.0 == 0.0 && value >= Int.MIN_VALUE && value <= Int.MAX_VALUE) value.toInt() else INVALID_NUMBER
 }
 
 fun itemFromJson(json: JSONObject): CryptoResult<VaultItem> {
@@ -168,6 +186,9 @@ fun itemFromJson(json: JSONObject): CryptoResult<VaultItem> {
                     customFields = customFields,
                     createdAt = createdAt,
                     updatedAt = updatedAt,
+                    totpAlgorithm = if (json.has("totpAlgorithm")) json.opt("totpAlgorithm") as? String ?: INVALID_ALGORITHM else null,
+                    totpDigits = optionalInt(json, "totpDigits"),
+                    totpPeriod = optionalInt(json, "totpPeriod"),
                 ),
             )
         }
@@ -291,11 +312,15 @@ fun sealItem(
     itemId: String,
     newVersion: Int,
     item: VaultItem,
-): CryptoResult<Envelope> = sealToEnvelope(
-    vaultKey,
-    itemToJson(item).toString().toByteArray(Charsets.UTF_8),
-    buildItemAad(itemId, newVersion).toByteArray(Charsets.UTF_8),
-)
+): CryptoResult<Envelope> {
+    if (invalidItemFields(item).isNotEmpty()) return err(CryptoFailure.INVALID_FORMAT)
+
+    return sealToEnvelope(
+        vaultKey,
+        itemContentBytes(item),
+        buildItemAad(itemId, newVersion).toByteArray(Charsets.UTF_8),
+    )
+}
 
 fun openItem(vaultKey: ByteArray, record: ItemRecord): CryptoResult<VaultItem> {
     val envelope = record.envelope ?: return err(CryptoFailure.INVALID_FORMAT)

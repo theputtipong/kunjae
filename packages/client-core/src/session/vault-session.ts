@@ -1,5 +1,7 @@
 import { wipe, wipeAccountKeys, type AccountKeys, type WrappingKey } from "@kunjae/core-crypto";
 
+import { clearStore } from "../store/vault-store.ts";
+
 export type UnlockedVault = {
   readonly vaultId: string;
   readonly key: CryptoKey;
@@ -80,7 +82,7 @@ export type OpenSessionParams = {
 };
 
 export const openSession = (params: OpenSessionParams): void => {
-  lockSession();
+  closeSession();
 
   session = {
     mode: "account",
@@ -105,7 +107,7 @@ export type OpenLocalSessionParams = {
 };
 
 export const openLocalSession = (params: OpenLocalSessionParams): void => {
-  lockSession();
+  closeSession();
 
   session = {
     mode: "local",
@@ -131,7 +133,7 @@ export const replaceLocalWrappingKey = (wrappingKey: WrappingKey): boolean => {
   return true;
 };
 
-export const lockSession = (): void => {
+const closeSession = (): void => {
   if (session === null) return;
 
   if (session.accountKeys !== null) wipeAccountKeys(session.accountKeys);
@@ -143,6 +145,14 @@ export const lockSession = (): void => {
   session.vaults.clear();
 
   session = null;
+};
+
+export const lockSession = (): void => {
+  const wasOpen = session !== null;
+  closeSession();
+  clearStore();
+  if (!wasOpen) return;
+
   rebuildView();
   notify();
 };
@@ -167,6 +177,8 @@ export const withWrappingKey = async <T>(
 
   return borrow(key);
 };
+
+export const hasUnlockedVault = (vaultId: string): boolean => session?.vaults.has(vaultId) === true;
 
 export const addUnlockedVault = (vault: UnlockedVault): void => {
   if (session === null) return;

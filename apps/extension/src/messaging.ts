@@ -91,6 +91,10 @@ export const LocalDismissMigrationRequestSchema = z.strictObject({
   kind: z.literal("local-dismiss-migration"),
 });
 
+export const ClearClipboardLaterRequestSchema = z.strictObject({
+  kind: z.literal("clear-clipboard-later"),
+});
+
 export const RequestSchema = z.discriminatedUnion("kind", [
   UnlockRequestSchema,
   LockRequestSchema,
@@ -110,12 +114,28 @@ export const RequestSchema = z.discriminatedUnion("kind", [
   LocalDeleteRequestSchema,
   LocalMigrateRequestSchema,
   LocalDismissMigrationRequestSchema,
+  ClearClipboardLaterRequestSchema,
 ]);
 
 export type Request = z.infer<typeof RequestSchema>;
 
+const UNLOCKED_SESSION_KINDS: ReadonlySet<Request["kind"]> = new Set([
+  "list",
+  "reveal",
+  "totp",
+  "load-for-edit",
+  "save",
+  "fill",
+  "fill-totp",
+]);
+
+export const requiresUnlockedSession = (kind: Request["kind"]): boolean =>
+  UNLOCKED_SESSION_KINDS.has(kind);
+
 export type ErrorCode =
   | "invalid-request"
+  | "invalid-input"
+  | "invalid-url"
   | "item-not-found"
   | "no-active-tab"
   | "no-saved-url"

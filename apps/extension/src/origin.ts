@@ -1,3 +1,26 @@
+const SCHEME_PATTERN = /^[a-z][a-z0-9+.-]*:\/\//i;
+
+export const normalizeWebsite = (raw: string): string | null => {
+  const trimmed = raw.trim();
+  if (trimmed === "") return "";
+  if (SCHEME_PATTERN.test(trimmed)) return trimmed;
+
+  const candidate = `https://${trimmed}`;
+  let url: URL;
+  try {
+    url = new URL(candidate);
+  } catch {
+    return null;
+  }
+
+  if (url.hostname === "" || url.username !== "" || url.password !== "") return null;
+
+  return candidate;
+};
+
+const savedOriginOf = (rawUrl: string | undefined | null): string | null =>
+  originOf(normalizeWebsite(rawUrl ?? ""));
+
 export const originOf = (rawUrl: string | undefined | null): string | null => {
   if (rawUrl === undefined || rawUrl === null || rawUrl === "") return null;
 
@@ -16,7 +39,7 @@ export const originOf = (rawUrl: string | undefined | null): string | null => {
 };
 
 export const hostOf = (rawUrl: string | undefined | null): string => {
-  const origin = originOf(rawUrl);
+  const origin = savedOriginOf(rawUrl);
   if (origin === null) return "";
 
   return new URL(origin).host;
@@ -38,7 +61,7 @@ export const decideFill = (
   tabUrl: string | undefined | null,
   savedUrl: string | undefined | null,
 ): FillDecision => {
-  const savedOrigin = originOf(savedUrl);
+  const savedOrigin = savedOriginOf(savedUrl);
   if (savedOrigin === null) return { allowed: false, reason: "no-saved-url" };
 
   if (tabUrl === undefined || tabUrl === null || tabUrl === "") {

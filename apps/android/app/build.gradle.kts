@@ -187,3 +187,27 @@ tasks.matching { it.name == "preReleaseBuild" }.configureEach {
         }
     }
 }
+
+tasks.withType<Test>().configureEach { failOnNoDiscoveredTests.set(false) }
+
+val verifyAppSecurity by tasks.registering(JavaExec::class) {
+    group = "verification"
+    description = "ตรวจว่าการเติมอัตโนมัติเชื่อ webDomain เฉพาะเบราว์เซอร์ และการล็อกเมื่อไม่ได้ใช้ทำงานจริง"
+
+    val kotlinRuntime = configurations.named("debugUnitTestRuntimeClasspath").map { config ->
+        config.incoming.artifactView {
+            lenient(true)
+            componentFilter { it is ModuleComponentIdentifier && it.group == "org.jetbrains.kotlin" }
+            attributes { attribute(Attribute.of("artifactType", String::class.java), "jar") }
+        }.files
+    }
+
+    classpath = files(
+        tasks.named("compileDebugKotlin"),
+        tasks.named("compileDebugUnitTestKotlin"),
+        kotlinRuntime,
+    )
+    mainClass.set("com.kunjae.app.VerifyAppSecurityKt")
+}
+
+tasks.named("check") { dependsOn(verifyAppSecurity) }

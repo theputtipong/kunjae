@@ -105,6 +105,19 @@ private fun checkKdf() {
         )
     }
 
+    val hkdfReject = vector.getJSONObject("hkdf").getJSONArray("mustReject")
+    check("HKDF มีกรณีที่ต้องปฏิเสธ", hkdfReject.length() > 0)
+    for (i in 0 until hkdfReject.length()) {
+        val case = hkdfReject.getJSONObject(i)
+        val result = hkdfSha256(
+            ikm = hex(case.getString("ikmHex")),
+            salt = hex(case.getString("saltHex")),
+            info = case.getString("purpose").toByteArray(Charsets.UTF_8),
+            length = case.getInt("lengthBytes"),
+        )
+        check("HKDF ต้องปฏิเสธ: ${case.getString("label")}", result is CryptoResult.Err)
+    }
+
     val argon = vector.getJSONObject("argon2id")
     val argonParams = argon.getJSONObject("params")
 
@@ -314,6 +327,69 @@ private fun checkProtocol() {
             bytesToHex(built.toByteArray(Charsets.UTF_8)) == case.getString("aadHex"),
         )
     }
+
+    checkVaultKeyAad(vector)
+}
+
+private fun checkVaultKeyAad(vector: JSONObject) {
+    val vaultKeyAads = vector.getJSONArray("vaultKeyAad")
+    check("มี AAD ของ vault key", vaultKeyAads.length() > 0)
+    for (i in 0 until vaultKeyAads.length()) {
+        val case = vaultKeyAads.getJSONObject(i)
+        val built = buildVaultKeyAad(case.getString("vaultId"))
+
+        check("AAD ของ vault key: ${case.getString("vaultId")}", built == case.getString("aad"))
+        check(
+            "AAD ของ vault key เป็นไบต์ตรงกัน: ${case.getString("vaultId")}",
+            bytesToHex(built.toByteArray(Charsets.UTF_8)) == case.getString("aadHex"),
+        )
+    }
+}
+
+private fun checkVaultKey() {
+    println("\n── vault-key.json ──")
+    val vector = loadVector("vault-key")
+
+    val unwrap = vector.getJSONObject("unwrap")
+    val wrappingKey = hex(unwrap.getString("wrappingKeyHex"))
+    val vaultId = unwrap.getString("vaultId")
+    val wrappedJson = unwrap.getJSONObject("wrapped")
+
+    check("AAD ของ vault key ตรงกับ fixture", buildVaultKeyAad(vaultId) == unwrap.getString("aad"))
+
+    val wrapped = parseEnvelope(wrappedJson.toString())
+    check("อ่าน envelope ของ vault key ได้", wrapped is CryptoResult.Ok)
+    val envelope = wrapped.valueOrNull() ?: return
+
+    val opened = openFromEnvelope(
+        wrappingKey,
+        envelope,
+        buildVaultKeyAad(vaultId).toByteArray(Charsets.UTF_8),
+    )
+    check(
+        "⭐ แกะ vault key ที่ห่อจาก TypeScript ได้",
+        opened.valueOrNull()?.let { bytesToHex(it) } == unwrap.getString("expectedVaultKeyHex"),
+    )
+    check("vault key ยาว 32 ไบต์", opened.valueOrNull()?.size == 32)
+
+    val mustFail = vector.getJSONArray("mustFail")
+    check("vault key มีกรณีที่ต้องล้มเหลว", mustFail.length() > 0)
+    for (i in 0 until mustFail.length()) {
+        val case = mustFail.getJSONObject(i)
+        val caseEnvelope = Envelope(
+            version = case.optInt("envelopeVersion", envelope.version),
+            algorithm = case.optString("envelopeAlg", envelope.algorithm),
+            nonce = envelope.nonce,
+            ciphertext = envelope.ciphertext,
+        )
+        val caseKey = hex(case.optString("wrappingKeyHex", unwrap.getString("wrappingKeyHex")))
+        val caseAad = buildVaultKeyAad(case.optString("vaultId", vaultId)).toByteArray(Charsets.UTF_8)
+
+        check(
+            "⭐ vault key ต้องล้มเหลว: ${case.getString("reason")}",
+            openFromEnvelope(caseKey, caseEnvelope, caseAad) is CryptoResult.Err,
+        )
+    }
 }
 
 private fun checkTotp() {
@@ -391,6 +467,7 @@ fun main() {
     checkKeyHierarchy()
     checkAead()
     checkProtocol()
+    checkVaultKey()
     checkTotp()
 
     println("\n═══ ผ่าน $passed / ล้มเหลว $failed ═══\n")
