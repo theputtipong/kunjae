@@ -205,7 +205,7 @@ scripts/
   android-dev.sh  เปิด API ในเครื่อง + emulator/มือถือ + ติดตั้งแอปด้วยคำสั่งเดียว
   icons/          สร้างไอคอนทุกขนาดจากรูปทรงชุดเดียว
   ci/             สคริปต์ที่ workflow ใช้ deploy และอัปโหลดขึ้นร้านค้า
-.github/workflows/  ci · deploy · android-release · extension-release
+.github/workflows/  ci · deploy · release-android · release-extension
 ```
 
 ---
@@ -299,19 +299,20 @@ cd apps/android
 ```
 
 ชุดตรวจของ Android เป็นโปรแกรม `main()` ไม่ใช่ JUnit ให้เรียกด้วย task ข้างบน อย่าใช้ `./gradlew test`
-CI (`.github/workflows/ci.yml`) รันทุก push และทุก pull request
+CI (`.github/workflows/ci.yml`) รันทุก pull request และรันก่อน deploy ทุกครั้งที่ push เข้า main
 
 ---
 
 ## การ deploy และ release
 
-ทุก workflow ที่ใช้ความลับทำงานเมื่อสั่งเองหรือเมื่อติดแท็กเท่านั้น
+`deploy.yml` รันอัตโนมัติเมื่อ push เข้า main (หลัง CI ผ่าน) และสั่งเองได้ · D1 migration รันเฉพาะตอนสั่งเองแล้วเลือก `run_migrations` · ถ้า environment `production` ยังตั้งค่าไม่ครบ job deploy จะถูกข้ามพร้อม notice
+workflow release ทำงานเมื่อสั่งเองหรือเมื่อติดแท็ก (`android-v*`, `extension-v*`) เท่านั้น
 
 | Workflow | ทำอะไร | ต้องตั้งค่า |
 |---|---|---|
 | `deploy.yml` | deploy API และ/หรือเว็บขึ้น Cloudflare | `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, vars `API_BASE_URL`, `WEB_ORIGIN`, `PLAY_SIGNING_CERT_SHA256` |
-| `android-release.yml` | build AAB/APK ที่ลงนามแล้ว · ส่ง Firebase App Distribution หรือ Google Play | `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`, `PLAY_SERVICE_ACCOUNT_JSON` (ไม่บังคับ: `FIREBASE_*`) |
-| `extension-release.yml` | build และอัปโหลดขึ้น Chrome Web Store | `CWS_CLIENT_ID`, `CWS_CLIENT_SECRET`, `CWS_REFRESH_TOKEN`, `CWS_EXTENSION_ID` |
+| `release-android.yml` | build AAB/APK ที่ลงนามแล้ว · ส่ง Firebase App Distribution หรือ Google Play | `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`, `PLAY_SERVICE_ACCOUNT_JSON` (ไม่บังคับ: `FIREBASE_*`) |
+| `release-extension.yml` | build และอัปโหลดขึ้น Chrome Web Store | `CWS_CLIENT_ID`, `CWS_CLIENT_SECRET`, `CWS_REFRESH_TOKEN`, `CWS_EXTENSION_ID` |
 
 ### API (ครั้งแรก)
 
