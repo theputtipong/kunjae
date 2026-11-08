@@ -42,3 +42,23 @@ val verifyLocalVault by tasks.registering(JavaExec::class) {
 }
 
 tasks.named("check") { dependsOn(verifyLocalVault) }
+
+val verifyItemContent by tasks.registering(JavaExec::class) {
+    group = "verification"
+    description = "ตรวจว่ารายการที่บันทึกจาก Android ผ่านกติกาเดียวกับ ItemContentSchema ของเว็บ"
+
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.kunjae.client.VerifyItemContentKt")
+}
+
+tasks.named("check") { dependsOn(verifyItemContent) }
+
+val verifyTotp by tasks.registering(JavaExec::class) {
+    group = "verification"
+    description = "ตรวจ TOTP และลิงก์ otpauth:// ให้ได้ผลตรงกับฝั่งเว็บ รวมทั้งเวกเตอร์ RFC 6238"
+
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.kunjae.client.VerifyTotpKt")
+}
+
+tasks.named("check") { dependsOn(verifyTotp) }

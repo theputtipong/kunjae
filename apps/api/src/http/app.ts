@@ -10,15 +10,17 @@ import {
   SyncPullRequestSchema,
   SyncPushRequestSchema,
 } from "@kunjae/contracts";
-import { constantTimeEqual } from "@kunjae/core-crypto";
+import { constantTimeEqual, utf8ToBytes, type Bytes } from "@kunjae/core-crypto";
 import { captureException } from "@sentry/cloudflare";
 import { Hono } from "hono";
+import { bodyLimit } from "hono/body-limit";
 import type { Context, MiddlewareHandler } from "hono";
 import type { z } from "zod";
 
 import { readContactConfig } from "../config/contact.ts";
 import { readAdminToken, readServerSecrets } from "../config/secrets.ts";
-import { touchRateLimit } from "../db/rate-limit.ts";
+import { hmacSha256 } from "../crypto/hmac.ts";
+import { refundRateLimit, touchRateLimit } from "../db/rate-limit.ts";
 import { submitContact } from "../usecases/contact.ts";
 import { createDb } from "../db/client.ts";
 import { authenticate, type Identity } from "../usecases/authenticate.ts";
@@ -35,7 +37,7 @@ import { syncPull, syncPush } from "../usecases/sync.ts";
 import { cors } from "./cors.ts";
 import { spendDailyBudget } from "../db/daily-usage.ts";
 import { underEdgeLimit, type EdgeLimiter } from "./edge-limit.ts";
-import { rateLimit } from "./rate-limit.ts";
+import { accountBucketFor, rateLimit } from "./rate-limit.ts";
 import { errorPayload, newRequestId, toErrorPayload } from "./responses.ts";
 
 type Variables = {
@@ -56,6 +58,12 @@ const CONTACT_DAILY_CAP = 50;
 const SECONDS_PER_DAY = 86_400;
 
 const DAILY_BUDGET = { maxPulls: 500, maxChanges: 3000 } as const;
+
+const LOGIN_PER_IP = { windowSeconds: 60, maxRequests: 12, failClosed: true } as const;
+
+const LOGIN_FAILURES_PER_ACCOUNT = { windowSeconds: 900, maxRequests: 10 } as const;
+
+const ADMIN_PER_IP = { windowSeconds: 60, maxRequests: 5, failClosed: true } as const;
 
 type LimitClass = "sync-pull" | "sync-push" | "sensitive";
 
@@ -91,6 +99,17 @@ export const createApp = (): Hono<App> => {
 
     return next();
   });
+
+  app.use(
+    "*",
+    bodyLimit({
+      maxSize: MAX_BODY_BYTES,
+      onError: (c) => {
+        const payload = errorPayload(400, "INVALID_REQUEST");
+        return c.json(payload.body, payload.status);
+      },
+    }),
+  );
 
   const tooMany = (c: Context<App>): Response => {
     const payload = errorPayload(429, "RATE_LIMITED");
@@ -138,9 +157,6 @@ export const createApp = (): Hono<App> => {
     c: Context<App>,
     schema: S,
   ): Promise<z.infer<S> | null> => {
-    const length = Number(c.req.header("Content-Length") ?? "0");
-    if (Number.isFinite(length) && length > MAX_BODY_BYTES) return null;
-
     try {
       const raw: unknown = await c.req.json();
       const parsed = schema.safeParse(raw);
@@ -165,17 +181,24 @@ export const createApp = (): Hono<App> => {
 
   app.get("/health", (c) => c.json({ status: "ok" as const }));
 
-  app.get("/v1/admin/usage", async (c) => {
+  const adminDigest = async (key: Bytes, token: string): Promise<Bytes | null> => {
+    const message = utf8ToBytes(`kunjae.admin-token.v1|${token}`);
+    if (!message.ok) return null;
+    const mac = await hmacSha256(key, message.value);
+    return mac.ok ? mac.value : null;
+  };
+
+  app.get("/v1/admin/usage", rateLimit(ADMIN_PER_IP), async (c) => {
     const configured = readAdminToken(c.env);
     if (configured === null) return c.notFound();
 
     const provided = c.req.header("x-admin-token") ?? "";
 
-    const encoder = new TextEncoder();
-    const toBytes = (text: string): Uint8Array<ArrayBuffer> => Uint8Array.from(encoder.encode(text));
-    if (!constantTimeEqual(toBytes(configured), toBytes(provided))) {
-      return c.notFound();
-    }
+    const key = c.get("deps").secrets.challengeKey;
+    const expected = await adminDigest(key, configured);
+    const actual = await adminDigest(key, provided);
+    if (expected === null || actual === null) return internalError(c);
+    if (!constantTimeEqual(expected, actual)) return c.notFound();
 
     const report = await readUsage(c.get("deps").db, new Date(c.get("deps").nowMs));
     return respond(c, report);
@@ -195,11 +218,28 @@ export const createApp = (): Hono<App> => {
     return respond(c, await loginBegin(c.get("deps"), body));
   });
 
-  app.post("/v1/auth/login/finish", rateLimit(), async (c) => {
+  app.post("/v1/auth/login/finish", rateLimit(LOGIN_PER_IP), async (c) => {
     const body = await readBody(c, LoginFinishRequestSchema);
     if (body === null) return badRequest(c);
 
-    return respond(c, await loginFinish(c.get("deps"), body));
+    const deps = c.get("deps");
+    const bucket = await accountBucketFor(deps.secrets.challengeKey, "login-finish", body.email);
+    if (bucket === null) return internalError(c);
+
+    const nowSeconds = Math.floor(deps.nowMs / 1000);
+    const limit = LOGIN_FAILURES_PER_ACCOUNT;
+    const state = await touchRateLimit(deps.db, bucket, nowSeconds, limit.windowSeconds, limit.maxRequests);
+    if (!state.ok) return internalError(c);
+    if (!state.value.allowed) {
+      c.header("Retry-After", String(limit.windowSeconds));
+      const payload = errorPayload(429, "RATE_LIMITED");
+      return c.json(payload.body, payload.status);
+    }
+
+    const result = await loginFinish(deps, body);
+    if (result.ok || result.error.kind !== "InvalidCredentials") await refundRateLimit(deps.db, bucket);
+
+    return respond(c, result);
   });
 
   app.post("/v1/contact", rateLimit(CONTACT_PER_IP), async (c) => {

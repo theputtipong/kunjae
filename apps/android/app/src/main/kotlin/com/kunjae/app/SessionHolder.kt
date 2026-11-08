@@ -2,6 +2,9 @@ package com.kunjae.app
 
 import com.kunjae.client.LocalVault
 import com.kunjae.client.Session
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
 sealed interface VaultSession {
     fun lock()
@@ -21,39 +24,32 @@ object SessionHolder {
 
     private const val IDLE_TIMEOUT_MS = 15 * 60 * 1000L
 
-    private var session: VaultSession? = null
-    private var lastUsedAtMs = 0L
+    private val unlockedState = MutableStateFlow(false)
 
-    @Synchronized
-    fun open(newSession: VaultSession, nowMs: Long = System.currentTimeMillis()) {
-        lock()
-        session = newSession
-        lastUsedAtMs = nowMs
-    }
+    val unlocked: StateFlow<Boolean> = unlockedState.asStateFlow()
 
-    @Synchronized
-    fun active(nowMs: Long = System.currentTimeMillis()): VaultSession? {
-        val current = session ?: return null
+    private val gate = SessionGate<VaultSession>(
+        IDLE_TIMEOUT_MS,
+        teardown = ::teardown,
+        onUnlockedChange = { unlockedState.value = it },
+    )
 
-        if (nowMs - lastUsedAtMs > IDLE_TIMEOUT_MS) {
-            lock()
-            return null
-        }
+    fun open(newSession: VaultSession, nowMs: Long = System.currentTimeMillis()) = gate.open(newSession, nowMs)
 
-        lastUsedAtMs = nowMs
-        return current
-    }
+    fun active(nowMs: Long = System.currentTimeMillis()): VaultSession? = gate.active(nowMs)
 
-    @Synchronized
-    fun lock() {
+    fun peek(nowMs: Long = System.currentTimeMillis()): VaultSession? = gate.peek(nowMs)
+
+    fun lock() = gate.lock()
+
+    fun idleRemainingMs(nowMs: Long = System.currentTimeMillis()): Long? = gate.idleRemainingMs(nowMs)
+
+    fun isUnlocked(nowMs: Long = System.currentTimeMillis()): Boolean = peek(nowMs) != null
+
+    private fun teardown(session: VaultSession?) {
         session?.lock()
-        session = null
-        lastUsedAtMs = 0L
         ItemStore.clear()
 
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) AssetLinksVerifier.clear()
     }
-
-    @Synchronized
-    fun isUnlocked(nowMs: Long = System.currentTimeMillis()): Boolean = active(nowMs) != null
 }

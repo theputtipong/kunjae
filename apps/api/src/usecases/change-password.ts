@@ -7,6 +7,7 @@ import { findAccountById, rotateCredentials } from "../db/accounts.ts";
 import { listVaults } from "../db/vaults.ts";
 import { isoNow, type Deps } from "./deps.ts";
 import {
+  conflict,
   internal,
   invalidCredentials,
   invalidRequest,
@@ -57,6 +58,7 @@ export const changeMasterPassword = async (
     argon2Parallelism: request.newArgon2.parallelism,
     argon2HashLength: request.newArgon2.hashLength,
     authKeyHash: newAuthKeyHash.value,
+    expectedTokenEpoch: row.tokenEpoch,
     rewrapped: request.rewrappedVaults.map((vault) => ({
       vaultId: vault.vaultId,
       wrappedVaultKey: JSON.stringify(vault.wrappedVaultKey),
@@ -64,6 +66,7 @@ export const changeMasterPassword = async (
     now,
   });
   if (!rotated.ok) return err(internal());
+  if (!rotated.value) return err(conflict());
 
   const token = await issueToken(deps.secrets.tokenSecret, {
     accountId,

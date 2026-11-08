@@ -80,7 +80,7 @@ export const insertVault = async (
     readonly now: string;
   },
 ): Promise<DbResult<void>> => {
-  const bumped = sql`(SELECT ${accounts.revision} + 1 FROM ${accounts} WHERE ${accounts.accountId} = ${params.accountId})`;
+  const bumped = sql`(SELECT ${accounts.revision} FROM ${accounts} WHERE ${accounts.accountId} = ${params.accountId})`;
 
   const result = await runQuery(
     db.batch([

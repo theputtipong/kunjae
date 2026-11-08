@@ -1,0 +1,34 @@
+{
+  "description": "การห่อ Vault Key ด้วย Wrapping Key ผ่าน Envelope โดยผูก vaultId เข้ากับ AAD",
+  "aadTemplate": "kunjae.v1.vault-key|{vaultId}",
+  "unwrap": {
+    "wrappingKeyHex": "a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0",
+    "vaultId": "5X5YZEPTWYXCCKFJQB0Q0H8338",
+    "aad": "kunjae.v1.vault-key|5X5YZEPTWYXCCKFJQB0Q0H8338",
+    "wrapped": {
+      "v": 1,
+      "alg": "A256GCM",
+      "n": "HgxdlY4D_ahA5gcR",
+      "ct": "LXIPV68kTHfB-nNIpmb-ANeg_6XVD9g-nFv4rsuhbEn8ski5WQl7w3YtgCzkMjWt"
+    },
+    "expectedVaultKeyHex": "1f1e1d1c1b1a191817161514131211100f0e0d0c0b0a09080706050403020100"
+  },
+  "mustFail": [
+    {
+      "reason": "vaultId ไม่ตรง (swap)",
+      "vaultId": "5X5YZEPTWYXCCKFJQB0Q0H8339"
+    },
+    {
+      "reason": "wrapping key ผิด",
+      "wrappingKeyHex": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1"
+    },
+    {
+      "reason": "alg ถูกแก้",
+      "envelopeAlg": "A128GCM"
+    },
+    {
+      "reason": "v ถูกแก้",
+      "envelopeVersion": 2
+    }
+  ]
+}

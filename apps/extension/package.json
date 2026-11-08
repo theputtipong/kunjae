@@ -11,6 +11,7 @@
     "zip": "wxt zip",
     "prepare:types": "wxt prepare",
     "typecheck": "wxt prepare && tsc --noEmit",
+    "test": "node --test 'src/**/*.test.ts'",
     "clean": "rm -rf .turbo .wxt .output node_modules *.tsbuildinfo"
   },
   "dependencies": {

@@ -54,5 +54,17 @@
       ],
       "totpSecret": ""
     }
-  }
+  },
+  "vaultKeyAad": [
+    {
+      "vaultId": "5X5YZEPTWYXCCKFJQB0Q0H8338",
+      "aad": "kunjae.v1.vault-key|5X5YZEPTWYXCCKFJQB0Q0H8338",
+      "aadHex": "6b756e6a61652e76312e7661756c742d6b65797c355835595a45505457595843434b464a51423051304838333338"
+    },
+    {
+      "vaultId": "01J00000000000000000000000",
+      "aad": "kunjae.v1.vault-key|01J00000000000000000000000",
+      "aadHex": "6b756e6a61652e76312e7661756c742d6b65797c30314a3030303030303030303030303030303030303030303030"
+    }
+  ]
 }

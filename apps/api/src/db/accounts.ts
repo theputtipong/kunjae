@@ -1,4 +1,4 @@
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
 import { ok, type Result } from "@kunjae/core-crypto";
 
@@ -40,6 +40,7 @@ export type RotateCredentialsParams = {
   readonly argon2Parallelism: number;
   readonly argon2HashLength: number;
   readonly authKeyHash: string;
+  readonly expectedTokenEpoch: number;
   readonly rewrapped: readonly { readonly vaultId: string; readonly wrappedVaultKey: string }[];
   readonly now: string;
 };
@@ -137,7 +138,13 @@ export const createAccountWithVault = async (
 export const rotateCredentials = async (
   db: Db,
   params: RotateCredentialsParams,
-): Promise<DbResult<void>> => {
+): Promise<DbResult<boolean>> => {
+  const vaultIds = params.rewrapped.map((vault) => vault.vaultId);
+  const expected = params.rewrapped.length;
+
+  const ownedVaultCount = sql`(SELECT COUNT(*) FROM ${vaults} WHERE ${vaults.accountId} = ${params.accountId})`;
+  const coveredVaultCount = sql`(SELECT COUNT(*) FROM ${vaults} WHERE ${vaults.accountId} = ${params.accountId} AND ${vaults.vaultId} IN ${vaultIds})`;
+
   const updateAccount = db
     .update(accounts)
     .set({
@@ -151,9 +158,20 @@ export const rotateCredentials = async (
       revision: sql`${accounts.revision} + 1`,
       updatedAt: params.now,
     })
-    .where(eq(accounts.accountId, params.accountId));
+    .where(
+      and(
+        eq(accounts.accountId, params.accountId),
+        eq(accounts.tokenEpoch, params.expectedTokenEpoch),
+        sql`${ownedVaultCount} = ${expected}`,
+        sql`${coveredVaultCount} = ${expected}`,
+      ),
+    )
+    .returning({ accountId: accounts.accountId });
 
   const currentRevision = sql`(SELECT ${accounts.revision} FROM ${accounts} WHERE ${accounts.accountId} = ${params.accountId})`;
+  const rotatedEpoch = sql`(SELECT ${accounts.tokenEpoch} FROM ${accounts} WHERE ${accounts.accountId} = ${params.accountId})`;
+  const rotatedSalt = sql`(SELECT ${accounts.accountSalt} FROM ${accounts} WHERE ${accounts.accountId} = ${params.accountId})`;
+  const rotatedAuthKeyHash = sql`(SELECT ${accounts.authKeyHash} FROM ${accounts} WHERE ${accounts.accountId} = ${params.accountId})`;
 
   const updateVaults = params.rewrapped.map((vault) =>
     db
@@ -163,7 +181,9 @@ export const rotateCredentials = async (
         revision: currentRevision,
         updatedAt: params.now,
       })
-      .where(sql`${vaults.vaultId} = ${vault.vaultId} AND ${vaults.accountId} = ${params.accountId}`),
+      .where(
+        sql`${vaults.vaultId} = ${vault.vaultId} AND ${vaults.accountId} = ${params.accountId} AND ${rotatedEpoch} = ${params.expectedTokenEpoch + 1} AND ${rotatedSalt} = ${params.accountSalt} AND ${rotatedAuthKeyHash} = ${params.authKeyHash}`,
+      ),
   );
 
   const statements: [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]] = [
@@ -171,9 +191,11 @@ export const rotateCredentials = async (
     ...updateVaults,
   ];
 
-  const result: Result<unknown, DbError> = await runQuery(db.batch(statements));
+  const result: Result<unknown[], DbError> = await runQuery(db.batch(statements));
   if (!result.ok) return result;
-  return ok(undefined);
+
+  const accountRows = result.value[0];
+  return ok(Array.isArray(accountRows) && accountRows.length === 1);
 };
 
 export const deleteAccount = async (db: Db, accountId: string): Promise<DbResult<void>> => {

@@ -25,8 +25,6 @@ object BiometricVault {
     private const val GCM_TAG_BITS = 128
     private const val NONCE_BYTES = 12
 
-    private const val MAX_AGE_MS = 14L * 24 * 60 * 60 * 1000
-
     data class Remembered(
         val email: String,
         val authKey: ByteArray,
@@ -60,7 +58,12 @@ object BiometricVault {
         cipher: Cipher,
         wrappingKey: ByteArray,
         nowMs: Long = System.currentTimeMillis(),
-    ): Boolean = seal(context, cipher, Slot.LOCAL, encodePayload("", ByteArray(KEY_BYTES), wrappingKey, nowMs))
+    ): Boolean = seal(
+        context,
+        cipher,
+        Slot.LOCAL,
+        BiometricPayload.encode("", ByteArray(BiometricPayload.KEY_BYTES), wrappingKey, nowMs),
+    )
 
     fun finishRemember(
         context: Context,
@@ -69,7 +72,7 @@ object BiometricVault {
         authKey: ByteArray,
         wrappingKey: ByteArray,
         nowMs: Long = System.currentTimeMillis(),
-    ): Boolean = seal(context, cipher, Slot.ACCOUNT, encodePayload(email, authKey, wrappingKey, nowMs))
+    ): Boolean = seal(context, cipher, Slot.ACCOUNT, BiometricPayload.encode(email, authKey, wrappingKey, nowMs))
 
     private fun seal(context: Context, cipher: Cipher, slot: Slot, payload: ByteArray): Boolean = runCatching {
         val sealed = try {
@@ -131,57 +134,20 @@ object BiometricVault {
         }
 
         try {
-            val parsed = decodePayload(opened)
-            if (parsed == null || nowMs - parsed.second > MAX_AGE_MS) {
-                parsed?.first?.wipe()
+            val parsed = BiometricPayload.decode(opened) ?: run {
                 forget(context, slot)
                 return null
             }
-            return parsed.first
+            val remembered = Remembered(parsed.email, parsed.authKey, parsed.wrappingKey)
+            if (BiometricPayload.expired(parsed.savedAtMs, nowMs)) {
+                remembered.wipe()
+                forget(context, slot)
+                return null
+            }
+            return remembered
         } finally {
             com.kunjae.crypto.wipe(opened)
         }
-    }
-
-    private const val KEY_BYTES = 32
-    private const val HEADER_BYTES = 8 + KEY_BYTES + KEY_BYTES
-
-    private fun encodePayload(
-        email: String,
-        authKey: ByteArray,
-        wrappingKey: ByteArray,
-        nowMs: Long,
-    ): ByteArray {
-        require(authKey.size == KEY_BYTES && wrappingKey.size == KEY_BYTES) {
-            "Unexpected key size"
-        }
-
-        val emailBytes = email.toByteArray(Charsets.UTF_8)
-        val out = ByteArray(HEADER_BYTES + emailBytes.size)
-
-        for (i in 0 until 8) out[i] = (nowMs shr (8 * (7 - i))).toByte()
-        authKey.copyInto(out, 8)
-        wrappingKey.copyInto(out, 8 + KEY_BYTES)
-        emailBytes.copyInto(out, HEADER_BYTES)
-
-        return out
-    }
-
-    private fun decodePayload(bytes: ByteArray): Pair<Remembered, Long>? {
-        if (bytes.size < HEADER_BYTES) return null
-
-        var savedAtMs = 0L
-        for (i in 0 until 8) savedAtMs = (savedAtMs shl 8) or (bytes[i].toLong() and 0xFF)
-
-        val email = runCatching {
-            String(bytes, HEADER_BYTES, bytes.size - HEADER_BYTES, Charsets.UTF_8)
-        }.getOrNull() ?: return null
-
-        return Remembered(
-            email = email,
-            authKey = bytes.copyOfRange(8, 8 + KEY_BYTES),
-            wrappingKey = bytes.copyOfRange(8 + KEY_BYTES, HEADER_BYTES),
-        ) to savedAtMs
     }
 
     private fun file(context: Context, slot: Slot): File = File(context.filesDir, slot.fileName)

@@ -2,6 +2,8 @@ import { base64UrlToBytes, err, invalidParameter, ok, type Bytes, type CryptoRes
 
 const MIN_SECRET_BYTES = 32;
 
+const MIN_ADMIN_TOKEN_LENGTH = 32;
+
 export type ServerSecrets = {
   readonly authPepper: Bytes;
   readonly tokenSecret: Bytes;
@@ -44,7 +46,7 @@ export const readAdminToken = (env: unknown): string | null => {
   if (typeof env !== "object" || env === null) return null;
 
   const raw: unknown = (env as Record<string, unknown>)["ADMIN_TOKEN"];
-  if (typeof raw !== "string" || raw.length === 0) return null;
+  if (typeof raw !== "string" || raw.length < MIN_ADMIN_TOKEN_LENGTH) return null;
 
   return raw;
 };

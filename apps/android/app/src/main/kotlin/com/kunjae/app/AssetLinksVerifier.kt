@@ -17,12 +17,17 @@ object AssetLinksVerifier {
 
     private const val MAX_DOCUMENT_BYTES = 128 * 1024
 
-    private const val CONNECT_TIMEOUT_MS = 5_000
-    private const val READ_TIMEOUT_MS = 5_000
+    private const val CONNECT_TIMEOUT_MS = 3_000
+    private const val READ_TIMEOUT_MS = 3_000
 
     private const val CACHE_TTL_MS = 6L * 60 * 60 * 1000
 
     private data class Verdict(val allowed: Boolean, val decidedAtMs: Long)
+
+    private sealed interface Fetch {
+        data class Answered(val document: String?) : Fetch
+        data object Unreachable : Fetch
+    }
 
     private val cache = mutableMapOf<String, Verdict>()
 
@@ -37,12 +42,14 @@ object AssetLinksVerifier {
 
         val fingerprints = certFingerprints(context, packageName)
 
-        val allowed = if (fingerprints.isEmpty()) {
-            false
-        } else {
-            val document = fetchDocument(host)
-            document != null && assetLinksAllow(document, packageName, fingerprints)
+        if (fingerprints.isEmpty()) return false
+
+        val document = when (val fetched = fetchDocument(host)) {
+            Fetch.Unreachable -> return false
+            is Fetch.Answered -> fetched.document
         }
+
+        val allowed = document != null && assetLinksAllow(document, packageName, fingerprints)
 
         synchronized(cache) { cache[key] = Verdict(allowed, nowMs) }
 
@@ -89,7 +96,7 @@ object AssetLinksVerifier {
             .digest(bytes)
             .joinToString(":") { "%02X".format(it) }
 
-    private fun fetchDocument(host: String): String? = runCatching {
+    private fun fetchDocument(host: String): Fetch = runCatching<Fetch> {
         val url = URL(documentUrlFor(host))
 
         val connection = (url.openConnection() as HttpURLConnection).apply {
@@ -101,7 +108,7 @@ object AssetLinksVerifier {
         }
 
         try {
-            if (connection.responseCode != HttpURLConnection.HTTP_OK) return null
+            if (connection.responseCode != HttpURLConnection.HTTP_OK) return@runCatching Fetch.Answered(null)
 
             connection.inputStream.use { stream ->
                 val buffer = ByteArray(MAX_DOCUMENT_BYTES + 1)
@@ -111,12 +118,12 @@ object AssetLinksVerifier {
                     if (n <= 0) break
                     read += n
                 }
-                if (read > MAX_DOCUMENT_BYTES) return null
+                if (read > MAX_DOCUMENT_BYTES) return@runCatching Fetch.Answered(null)
 
-                String(buffer, 0, read, Charsets.UTF_8)
+                Fetch.Answered(String(buffer, 0, read, Charsets.UTF_8))
             }
         } finally {
             connection.disconnect()
         }
-    }.getOrNull()
+    }.getOrDefault(Fetch.Unreachable)
 }

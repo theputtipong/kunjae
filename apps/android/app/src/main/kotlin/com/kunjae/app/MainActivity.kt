@@ -106,6 +106,17 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun onUserInteraction() {
+        super.onUserInteraction()
+        SessionHolder.active()
+    }
+
+    override fun onStart() {
+        super.onStart()
+        val model: VaultViewModel by viewModels()
+        model.enforceIdleLock()
+    }
+
     override fun onResume() {
         super.onResume()
         integrityCode = IntegrityGuard.code(IntegrityGuard.findings(this))
@@ -238,7 +249,7 @@ private fun KunjaeApp(
 
     val context = LocalContext.current
     var captureAllowed by remember { mutableStateOf(CapturePrefs.load(context)) }
-    val secure = state.unlocked && !captureAllowed
+    val secure = !state.unlocked || !captureAllowed
     SideEffect { onSecureChange(secure) }
     var showOnboarding by remember { mutableStateOf(!OnboardingPrefs.seen(context)) }
     var route by remember(state.unlocked) { mutableStateOf<Route>(Route.List) }

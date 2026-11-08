@@ -211,6 +211,11 @@ export const en = {
     securityCode: "Security code",
     notes: "Notes",
     saving: "Encrypting and saving…",
+    titleRequired: "Enter a title (up to 200 characters).",
+    invalidExpiryMonth: "Expiry month must be two digits from 01 to 12.",
+    invalidExpiryYear: "Expiry year must be 4 digits, like 2030.",
+    invalidField: (label: string) => `Check "${label}" — it's too long or in the wrong format.`,
+    invalidFieldGeneric: "Some details are too long or in the wrong format — check them and try again.",
   },
   detail: {
     oneTimeCode: "One-time code",

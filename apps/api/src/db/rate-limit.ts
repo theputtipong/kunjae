@@ -50,3 +50,6 @@ export const pruneRateLimits = async (
   olderThanSeconds: number,
 ): Promise<DbResult<unknown>> =>
   runQuery(db.run(sql`DELETE FROM rate_limits WHERE window_start < ${olderThanSeconds}`));
+
+export const refundRateLimit = async (db: Db, bucket: string): Promise<DbResult<unknown>> =>
+  runQuery(db.run(sql`UPDATE rate_limits SET count = count - 1 WHERE bucket = ${bucket} AND count > 0`));

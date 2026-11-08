@@ -4,6 +4,7 @@ import { join } from "node:path";
 import {
   ARGON2_PARAMS_V1,
   KEY_PURPOSE,
+  LOCAL_KEY_PURPOSE,
   bytesToBase32,
   bytesToBase64Url,
   bytesToHex,
@@ -18,8 +19,11 @@ import {
   parseSecretKey,
   toAccountSalt,
   toSecretKey,
+  toWrappedVaultKey,
+  unwrapVaultKey,
   utf8ToBytes,
   type Bytes,
+  type WrappingKey,
 } from "@kunjae/core-crypto";
 import { buildItemAad, buildVaultMetaAad } from "@kunjae/contracts";
 
@@ -91,7 +95,9 @@ const generateKdf = async (): Promise<void> => {
   const ikm = hex("0b".repeat(32));
   const salt = hex("22".repeat(32));
 
-  const hkdf = Object.values(KEY_PURPOSE).map((purpose) => ({
+  const purposes = [...Object.values(KEY_PURPOSE), ...Object.values(LOCAL_KEY_PURPOSE)];
+
+  const hkdf = purposes.map((purpose) => ({
     purpose,
     ikmHex: bytesToHex(ikm),
     saltHex: bytesToHex(salt),
@@ -112,6 +118,12 @@ const generateKdf = async (): Promise<void> => {
       hash: "SHA-256",
       note: "info คือข้อความ UTF-8 ของ purpose ส่วน salt กับ ikm เป็นไบต์ดิบ",
       cases: hkdf,
+      mustReject: [
+        { label: "salt 15 ไบต์ (ต่ำกว่า 16)", purpose: KEY_PURPOSE.AUTHENTICATION, ikmHex: bytesToHex(ikm), saltHex: "22".repeat(15), lengthBytes: 32 },
+        { label: "salt ว่าง", purpose: KEY_PURPOSE.AUTHENTICATION, ikmHex: bytesToHex(ikm), saltHex: "", lengthBytes: 32 },
+        { label: "ikm ว่าง", purpose: KEY_PURPOSE.AUTHENTICATION, ikmHex: "", saltHex: bytesToHex(salt), lengthBytes: 32 },
+        { label: "length เป็นศูนย์", purpose: KEY_PURPOSE.AUTHENTICATION, ikmHex: bytesToHex(ikm), saltHex: bytesToHex(salt), lengthBytes: 0 },
+      ],
     },
     argon2id: {
       note: "รหัสผ่านถูกแปลงเป็นไบต์ด้วย UTF-8 ก่อนส่งเข้า KDF",
@@ -307,6 +319,55 @@ const generateProtocol = (): void => {
         totpSecret: "",
       },
     },
+    vaultKeyAad: [vaultId, "01J00000000000000000000000"].map((id) => ({
+      vaultId: id,
+      aad: `${VAULT_KEY_AAD_PREFIX}${id}`,
+      aadHex: bytesToHex(utf8(`${VAULT_KEY_AAD_PREFIX}${id}`)),
+    })),
+  });
+};
+
+const VAULT_KEY_AAD_PREFIX = "kunjae.v1.vault-key|";
+
+const FIXED_VAULT_KEY = {
+  wrappingKeyHex: "a0".repeat(32),
+  vaultId: "5X5YZEPTWYXCCKFJQB0Q0H8338",
+  vaultKeyHex: "1f1e1d1c1b1a191817161514131211100f0e0d0c0b0a09080706050403020100",
+  wrapped: {
+    v: 1 as const,
+    alg: "A256GCM" as const,
+    n: "HgxdlY4D_ahA5gcR",
+    ct: "LXIPV68kTHfB-nNIpmb-ANeg_6XVD9g-nFv4rsuhbEn8ski5WQl7w3YtgCzkMjWt",
+  },
+};
+
+const generateVaultKey = async (): Promise<void> => {
+  const wrappingKey = hex(FIXED_VAULT_KEY.wrappingKeyHex) as WrappingKey;
+  const wrapped = unwrap(toWrappedVaultKey(FIXED_VAULT_KEY.wrapped), "toWrappedVaultKey");
+  const opened = unwrap(
+    await unwrapVaultKey(wrappingKey, wrapped, FIXED_VAULT_KEY.vaultId),
+    "unwrapVaultKey",
+  );
+  if (bytesToHex(opened) !== FIXED_VAULT_KEY.vaultKeyHex) {
+    throw new Error("ค่าคงที่ของ vault key ถอดแล้วไม่ตรง");
+  }
+
+  writeVectors("vault-key", {
+    description: "การห่อ Vault Key ด้วย Wrapping Key ผ่าน Envelope โดยผูก vaultId เข้ากับ AAD",
+    aadTemplate: `${VAULT_KEY_AAD_PREFIX}{vaultId}`,
+    unwrap: {
+      wrappingKeyHex: FIXED_VAULT_KEY.wrappingKeyHex,
+      vaultId: FIXED_VAULT_KEY.vaultId,
+      aad: `${VAULT_KEY_AAD_PREFIX}${FIXED_VAULT_KEY.vaultId}`,
+      wrapped: FIXED_VAULT_KEY.wrapped,
+      expectedVaultKeyHex: FIXED_VAULT_KEY.vaultKeyHex,
+    },
+    mustFail: [
+      { reason: "vaultId ไม่ตรง (swap)", vaultId: "5X5YZEPTWYXCCKFJQB0Q0H8339" },
+      { reason: "wrapping key ผิด", wrappingKeyHex: "a1".repeat(32) },
+      { reason: "alg ถูกแก้", envelopeAlg: "A128GCM" },
+      { reason: "v ถูกแก้", envelopeVersion: 2 },
+    ],
   });
 };
 
@@ -394,5 +455,6 @@ await generateKeyHierarchy();
 generateSecretKeyFormat();
 await generateAead();
 generateProtocol();
+await generateVaultKey();
 generateTotp();
 console.log("เสร็จสิ้น — ไฟล์ทั้งหมดอยู่ใน packages/crypto-spec/vectors/");

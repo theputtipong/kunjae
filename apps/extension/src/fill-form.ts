@@ -9,8 +9,8 @@ export const fillCredentials = (username: string, password: string): boolean => 
 
   if (passwordField === undefined) return false;
 
-  const form = passwordField.form;
-  const candidates = form === null ? [] : [...form.querySelectorAll("input")];
+  const scope = passwordField.form ?? document;
+  const candidates = [...scope.querySelectorAll("input")];
   const passwordIndex = candidates.indexOf(passwordField);
 
   const usernameField = candidates

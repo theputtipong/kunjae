@@ -23,6 +23,9 @@ export const syncPull = async (
 ): Promise<UseCaseResult<SyncPullResponse>> => {
   const pageSize = SYNC_LIMITS.pullPageSize;
 
+  const revision = await currentRevision(deps.db, accountId);
+  if (!revision.ok) return err(internal());
+
   const vaultRows = await listVaultsSince(deps.db, accountId, request.since);
   if (!vaultRows.ok) return err(internal());
 
@@ -83,9 +86,6 @@ export const syncPull = async (
 
     return ok({ vaults, items, revision: last.revision, hasMore: true });
   }
-
-  const revision = await currentRevision(deps.db, accountId);
-  if (!revision.ok) return err(internal());
 
   return ok({ vaults, items, revision: revision.value, hasMore: false });
 };

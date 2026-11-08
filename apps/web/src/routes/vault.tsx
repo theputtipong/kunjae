@@ -3,14 +3,14 @@ import {
   emptyItemOfType,
   generatePassword,
   ITEM_TYPES,
+  loginTotpCode,
   type ItemContent,
   type ItemType,
+  type LoginItem,
 } from "@kunjae/domain";
 
-import { totpFromSecretText } from "@kunjae/core-crypto";
-
 import { createUlid } from "@kunjae/client-core";
-import { errorMessage } from "@kunjae/client-core";
+import { errorMessage, type AppError } from "@kunjae/client-core";
 import {
   createNewVault,
   deleteItemById,
@@ -32,16 +32,56 @@ import { MigrateLocalCard } from "../ui/local-vault.tsx";
 import { useSession } from "../session/use-session.ts";
 import { useMigrationDismissed } from "../session/local-presence.ts";
 import { RequireUnlocked } from "./require-unlocked.tsx";
-import { useLang, useT } from "../i18n/index.ts";
+import { useLang, useT, type Dictionary } from "../i18n/index.ts";
+import { createClipboardGuard } from "../clipboard.ts";
+import { normalizeWebsite } from "../website.ts";
 
 const CLIPBOARD_CLEAR_MS = 30_000;
 
+const onRefocus = (listener: () => void): (() => void) => {
+  const handler = (): void => {
+    if (document.visibilityState === "visible") listener();
+  };
+  window.addEventListener("focus", handler);
+  document.addEventListener("visibilitychange", handler);
+  return () => {
+    window.removeEventListener("focus", handler);
+    document.removeEventListener("visibilitychange", handler);
+  };
+};
+
+const clipboard = createClipboardGuard({
+  write: (text) => navigator.clipboard.writeText(text),
+  onRefocus,
+  clearAfterMs: CLIPBOARD_CLEAR_MS,
+});
+
 const copySecret = (value: string): void => {
-  void navigator.clipboard.writeText(value).then(() => {
-    setTimeout(() => {
-      void navigator.clipboard.writeText("");
-    }, CLIPBOARD_CLEAR_MS);
-  });
+  void clipboard.copy(value);
+};
+
+const FIELD_LABEL_KEYS: Readonly<Record<string, keyof Dictionary["editor"]>> = {
+  username: "username",
+  password: "password",
+  totpSecret: "totpSecret",
+  urls: "website",
+  cardholderName: "cardholderName",
+  number: "cardNumber",
+  securityCode: "securityCode",
+  notes: "notes",
+};
+
+const invalidItemMessage = (error: AppError, editor: Dictionary["editor"]): string | null => {
+  if (error.kind !== "InvalidInput") return null;
+
+  const field = error.field.split(".")[0] ?? error.field;
+  if (field === "title") return editor.titleRequired;
+  if (field === "expiryMonth") return editor.invalidExpiryMonth;
+  if (field === "expiryYear") return editor.invalidExpiryYear;
+
+  const labelKey = FIELD_LABEL_KEYS[field];
+  const label = labelKey === undefined ? null : editor[labelKey];
+  return typeof label === "string" ? editor.invalidField(label) : editor.invalidFieldGeneric;
 };
 
 type EditorProps = {
@@ -98,6 +138,16 @@ const ItemEditor = ({ itemId, targetVaultId, onDone }: EditorProps) => {
       return;
     }
 
+    const website = content.type === "login" ? normalizeWebsite(content.urls[0] ?? "") : "";
+    if (website === null) {
+      setError(t.editor.invalidField(t.editor.website));
+      setBusy(false);
+      return;
+    }
+
+    const toSave: ItemContent =
+      content.type === "login" ? { ...content, urls: website === "" ? content.urls.slice(1) : [website, ...content.urls.slice(1)] } : content;
+
     const newId = createUlid(nowMs);
     if (ref === null && !newId.ok) {
       setError(t.editor.idFailed);
@@ -108,13 +158,13 @@ const ItemEditor = ({ itemId, targetVaultId, onDone }: EditorProps) => {
     const result = await saveItem({
       itemId: ref?.itemId ?? (newId.ok ? newId.value : ""),
       vaultId: saveToVaultId,
-      content,
+      content: toSave,
       baseVersion: ref?.version ?? 0,
       nowMs,
     });
 
     if (!result.ok) {
-      setError(errorMessage(result.error, lang));
+      setError(invalidItemMessage(result.error, t.editor) ?? errorMessage(result.error, lang));
       setBusy(false);
       return;
     }
@@ -279,7 +329,7 @@ const ItemEditor = ({ itemId, targetVaultId, onDone }: EditorProps) => {
   );
 };
 
-const TotpRow = ({ secret }: { readonly secret: string }) => {
+const TotpRow = ({ login }: { readonly login: LoginItem }) => {
   const t = useT();
   const [now, setNow] = useState(() => Date.now());
 
@@ -288,7 +338,7 @@ const TotpRow = ({ secret }: { readonly secret: string }) => {
     return () => { clearInterval(id); };
   }, []);
 
-  const result = totpFromSecretText(secret, now);
+  const result = loginTotpCode(login, now);
 
   if (!result.ok) {
     return (
@@ -389,7 +439,7 @@ const ItemDetail = ({
               </div>
             </div>
 
-            {content.totpSecret !== "" && <TotpRow secret={content.totpSecret} />}
+            {content.totpSecret !== "" && <TotpRow login={content} />}
 
             {content.urls.length > 0 && (
               <div>

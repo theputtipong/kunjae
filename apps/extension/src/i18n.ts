@@ -195,6 +195,8 @@ const en = {
     `This page's address (${tabOrigin}) doesn't match the saved one (${savedOrigin})`,
   errors: {
     "invalid-request": "Invalid request",
+    "invalid-input": "Some details are missing or invalid — check them and try again",
+    "invalid-url": "The website address isn't valid — enter something like example.com",
     "item-not-found": "Item not found",
     "no-active-tab": "No open web page found",
     "no-saved-url": "This item has no saved website address, so it can't be filled",
@@ -416,6 +418,8 @@ const th: Dictionary = {
     `ที่อยู่ของหน้านี้ (${tabOrigin}) ไม่ตรงกับที่บันทึกไว้ (${savedOrigin})`,
   errors: {
     "invalid-request": "คำขอไม่ถูกต้อง",
+    "invalid-input": "ข้อมูลบางช่องไม่ครบหรือไม่ถูกต้อง — ตรวจสอบแล้วลองใหม่",
+    "invalid-url": "ที่อยู่เว็บไซต์ไม่ถูกต้อง — กรอกแบบ example.com",
     "item-not-found": "ไม่พบรายการนี้",
     "no-active-tab": "ไม่พบหน้าเว็บที่เปิดอยู่",
     "no-saved-url": "รายการนี้ไม่ได้บันทึกที่อยู่เว็บไว้ จึงเติมให้ไม่ได้",

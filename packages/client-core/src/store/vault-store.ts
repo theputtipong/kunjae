@@ -136,6 +136,9 @@ export const getItemRef = (
   return { itemId: item.itemId, vaultId: item.vaultId, version: item.version };
 };
 
+export const getVaultVersion = (vaultId: string): number | null =>
+  state.vaults.get(vaultId)?.version ?? null;
+
 export const getAllItemsForExport = (): readonly DecryptedItem[] =>
   [...state.items.values()];
 

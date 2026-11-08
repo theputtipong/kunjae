@@ -15,6 +15,7 @@
 
   "scripts": {
     "typecheck": "tsc --noEmit",
+    "test": "node --test 'src/**/*.test.ts'",
     "clean": "rm -rf .turbo node_modules *.tsbuildinfo"
   },
 

@@ -14,7 +14,6 @@ import android.service.autofill.FillRequest
 import android.service.autofill.FillResponse
 import android.service.autofill.SaveCallback
 import android.service.autofill.SaveRequest
-import android.view.View
 import android.view.autofill.AutofillId
 import android.util.Log
 import android.view.autofill.AutofillValue
@@ -24,15 +23,19 @@ import com.kunjae.client.DecryptedItem
 import com.kunjae.client.LoginItem
 import com.kunjae.client.decideAppAutofill
 import com.kunjae.client.decideAutofill
+import com.kunjae.client.hostOfSavedUrl
 import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicBoolean
 
 @RequiresApi(Build.VERSION_CODES.P)
 class KunjaeAutofillService : AutofillService() {
 
     private companion object {
-        const val HINT_SMS_OTP = "smsOTPCode"
+        const val VERIFY_DEADLINE_MS = 3_500L
 
-        const val HINT_ONE_TIME_CODE = "one-time-code"
+        const val VERIFY_THREADS = 4
+
+        const val EMULATOR_HOST_ALIAS = "10.0.2.2"
     }
 
     private data class Fields(
@@ -40,13 +43,17 @@ class KunjaeAutofillService : AutofillService() {
         val passwordId: AutofillId?,
         val otpId: AutofillId?,
         val webDomain: String?,
+        val webScheme: String?,
     )
 
-    private val verifier = Executors.newSingleThreadExecutor()
+    private val verifier = Executors.newCachedThreadPool()
+
+    private val fetchers = Executors.newFixedThreadPool(VERIFY_THREADS)
 
     override fun onDestroy() {
         super.onDestroy()
         verifier.shutdownNow()
+        fetchers.shutdownNow()
     }
 
     override fun onFillRequest(
@@ -77,43 +84,56 @@ class KunjaeAutofillService : AutofillService() {
             return
         }
 
-        if (SessionHolder.active() == null) {
+        if (SessionHolder.peek() == null) {
             callback.onSuccess(null)
             return
         }
 
         val logins = ItemStore.all().filter { it.item is LoginItem }
 
-        if (fields.webDomain != null) {
+        val target = structure.activityComponent?.packageName
+        val debugBrowsers = if (BuildConfig.DEBUG) setOf(packageName) else emptySet()
+
+        if (fields.webDomain != null && AutofillPolicy.honorsWebDomain(target, debugBrowsers)) {
             val matches = logins.filter { entry ->
-                val urls = (entry.item as? LoginItem)?.urls
-                decideAutofill(fields.webDomain, urls?.firstOrNull()) is AutofillDecision.Allowed
+                val saved = (entry.item as? LoginItem)?.urls?.firstOrNull()
+                decideAutofill(fields.webDomain, saved) is AutofillDecision.Allowed &&
+                    AutofillPolicy.schemeAllows(fields.webScheme, saved)
             }
             diagnose("matches=${matches.size} of ${ItemStore.all().size} items")
             callback.onSuccess(responseFor(matches, fields))
             return
         }
 
-        val target = request.fillContexts.lastOrNull()?.structure?.activityComponent?.packageName
-
         if (target == null || (target == packageName && !BuildConfig.DEBUG)) {
             callback.onSuccess(null)
             return
         }
 
-        var cancelled = false
-        cancellationSignal.setOnCancelListener { cancelled = true }
+        val cancelled = AtomicBoolean(false)
+        cancellationSignal.setOnCancelListener { cancelled.set(true) }
 
         verifier.execute {
+            val savedHosts = logins.mapNotNull { entry -> hostOfSavedUrl((entry.item as? LoginItem)?.urls?.firstOrNull()) }
+            val debugHosts = if (BuildConfig.DEBUG) setOf(EMULATOR_HOST_ALIAS) else emptySet()
+            val candidates = AssetLinksScope.candidates(target, savedHosts, debugHosts)
+
+            val verified = if (cancelled.get()) {
+                emptySet()
+            } else {
+                AssetLinksScope.verifyAll(candidates, fetchers, VERIFY_DEADLINE_MS) { host ->
+                    !cancelled.get() && AssetLinksVerifier.authorizes(applicationContext, host, target)
+                }
+            }
+
             val matches = logins.filter { entry ->
                 val urls = (entry.item as? LoginItem)?.urls
-                decideAppAutofill(target, urls?.firstOrNull()) { host ->
-                    AssetLinksVerifier.authorizes(applicationContext, host, target)
-                } is AutofillDecision.AllowedByAssetLinks
+                decideAppAutofill(target, urls?.firstOrNull()) { host -> host in verified } is AutofillDecision.AllowedByAssetLinks
             }
 
             diagnose(
-                "native app $target: ${matches.size} items verified by Asset Links" +
+                "native app $target: ${matches.size} items verified by Asset Links " +
+                    "(${verified.size}/${candidates.size} hosts)" +
                     if (AssetLinksVerifier.canReadCertificate(applicationContext, target)) {
                         ""
                     } else {
@@ -121,9 +141,9 @@ class KunjaeAutofillService : AutofillService() {
                     },
             )
 
-            if (cancelled) return@execute
+            if (cancelled.get()) return@execute
 
-            if (SessionHolder.active() == null) {
+            if (SessionHolder.peek() == null) {
                 callback.onSuccess(null)
                 return@execute
             }
@@ -201,58 +221,33 @@ class KunjaeAutofillService : AutofillService() {
     }
 
     private fun findFields(structure: AssistStructure): Fields {
-        var usernameId: AutofillId? = null
-        var passwordId: AutofillId? = null
-        var otpId: AutofillId? = null
-        var webDomain: String? = null
+        val nodes = mutableListOf<FieldNode<AutofillId>>()
 
-        fun visit(node: AssistStructure.ViewNode) {
-            node.webDomain?.let { if (it.isNotBlank() && webDomain == null) webDomain = it }
-
-            val hints = node.autofillHints?.toList() ?: emptyList()
-
-            val variation = node.inputType and android.text.InputType.TYPE_MASK_VARIATION
-            val isPasswordVariation = variation == android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD ||
-                variation == android.text.InputType.TYPE_TEXT_VARIATION_WEB_PASSWORD ||
-                variation == android.text.InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD
+        fun visit(node: AssistStructure.ViewNode, parentDomain: String?, parentScheme: String?) {
+            val ownDomain = node.webDomain?.takeIf { it.isNotBlank() }
+            val domain = AutofillFields.inherit(ownDomain, parentDomain)
+            val scheme = if (ownDomain != null) node.webScheme else parentScheme
 
             val html = node.htmlInfo
-            val htmlType = if (html?.tag == "input") {
-                html.attributes?.firstOrNull { it.first == "type" }?.second?.lowercase()
-            } else {
-                null
-            }
-
-            val isPassword = hints.any { it == View.AUTOFILL_HINT_PASSWORD } ||
-                isPasswordVariation ||
-                htmlType == "password"
-
-            val isUsername = hints.any {
-                it == View.AUTOFILL_HINT_USERNAME || it == View.AUTOFILL_HINT_EMAIL_ADDRESS
-            } || htmlType == "email" || htmlType == "text"
-
-            val htmlAutocomplete = if (html?.tag == "input") {
-                html.attributes?.firstOrNull { it.first == "autocomplete" }?.second?.lowercase()
-            } else {
-                null
-            }
-
-            val isOtp = hints.any { it == HINT_SMS_OTP || it == HINT_ONE_TIME_CODE } ||
-                htmlAutocomplete == "one-time-code"
+            val attributes = html?.attributes
+            val kind = AutofillFields.classify(
+                hints = node.autofillHints?.toList() ?: emptyList(),
+                inputType = node.inputType,
+                htmlTag = html?.tag,
+                htmlType = attributes?.firstOrNull { it.first == "type" }?.second,
+                htmlAutocomplete = attributes?.firstOrNull { it.first == "autocomplete" }?.second,
+            )
 
             val id = node.autofillId
-            if (id != null) {
-                if (isOtp && otpId == null) otpId = id
-                else if (isPassword && passwordId == null) passwordId = id
-                else if (isUsername && usernameId == null) usernameId = id
-            }
+            if (id != null && kind != FieldKind.OTHER) nodes += FieldNode(id, kind, domain, scheme)
 
-            for (i in 0 until node.childCount) visit(node.getChildAt(i))
+            for (i in 0 until node.childCount) visit(node.getChildAt(i), domain, scheme)
         }
 
-        for (i in 0 until structure.windowNodeCount) visit(structure.getWindowNodeAt(i).rootViewNode)
+        for (i in 0 until structure.windowNodeCount) visit(structure.getWindowNodeAt(i).rootViewNode, null, null)
 
-        return Fields(usernameId, passwordId, otpId, webDomain)
+        val selected = AutofillFields.select(nodes)
+        return Fields(selected.usernameId, selected.passwordId, selected.otpId, selected.webDomain, selected.webScheme)
     }
 
     private fun diagnose(message: String) {

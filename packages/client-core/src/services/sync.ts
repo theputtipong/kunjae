@@ -4,14 +4,17 @@ import {
   createItem,
   deleteItem,
   openItem,
+  normalizeItemContent,
   openVault,
   updateItem,
+  type DomainError,
   type ItemContent,
 } from "@kunjae/domain";
 
 import { apiSyncPull, apiSyncPush } from "../api/client.ts";
 import {
   addUnlockedVault,
+  hasUnlockedVault,
   isLocalSession,
   withVaultKey,
   withWrappingKey,
@@ -21,6 +24,7 @@ import {
   getItemContent,
   getItemRef,
   getRevision,
+  getVaultVersion,
   markBroken,
   removeItem,
   setRevision,
@@ -32,16 +36,24 @@ import { ensureToken } from "./auth.ts";
 import {
   conflict,
   fromApiError,
+  invalidInput,
   lockIfSessionExpired,
   sessionExpired,
   unexpected,
   untrustedServer,
+  type AppError,
   type AppResult,
 } from "./errors.ts";
 
 const MAX_PULL_ROUNDS = 100;
 
+const fromSealError = (error: DomainError): AppError =>
+  error.kind === "ItemContentInvalid" ? invalidInput(error.fields[0] ?? "item") : unexpected();
+
 const absorbVault = async (record: VaultRecord): Promise<AppResult<void>> => {
+  const known = getVaultVersion(record.vaultId);
+  if (known !== null && record.version < known) return ok(undefined);
+
   const opened = await withWrappingKey(async (wrappingKey) => openVault(wrappingKey, record));
   if (opened === null) return err(sessionExpired());
 
@@ -60,6 +72,9 @@ const absorbVault = async (record: VaultRecord): Promise<AppResult<void>> => {
 };
 
 const absorbItem = async (record: SyncedItem): Promise<void> => {
+  const known = getItemRef(record.itemId);
+  if (known !== null && record.version < known.version) return;
+
   if (record.deleted) {
     removeItem(record.itemId);
     return;
@@ -122,7 +137,6 @@ const pushChange = async (change: ItemChange, nowMs: number): Promise<AppResult<
     return err(conflict());
   }
 
-  setRevision(result.value.revision);
   return ok(undefined);
 };
 
@@ -137,33 +151,39 @@ export type SaveItemParams = {
 export const saveItem = async (params: SaveItemParams): Promise<AppResult<void>> => {
   const now = new Date(params.nowMs).toISOString();
 
+  const normalized = normalizeItemContent(params.content);
+  if (!normalized.ok) return err(fromSealError(normalized.error));
+  const content = normalized.value;
+
   const change = await withVaultKey(params.vaultId, async (key) =>
     params.baseVersion === 0
       ? createItem(key, {
           itemId: params.itemId,
           vaultId: params.vaultId,
-          content: params.content,
+          content,
           now,
         })
       : updateItem(
           key,
           { itemId: params.itemId, vaultId: params.vaultId, version: params.baseVersion },
-          params.content,
+          content,
           now,
         ),
   );
 
   if (change === null) return err(sessionExpired());
-  if (!change.ok) return err(unexpected());
+  if (!change.ok) return err(fromSealError(change.error));
 
   const pushed = await pushChange(change.value, params.nowMs);
   if (!pushed.ok) return pushed;
+
+  if (!hasUnlockedVault(params.vaultId)) return err(sessionExpired());
 
   upsertItem({
     itemId: params.itemId,
     vaultId: params.vaultId,
     version: change.value.version,
-    content: params.content,
+    content: { ...content, updatedAt: now },
   });
 
   return ok(undefined);
@@ -174,57 +194,126 @@ export type NewItem = {
   readonly content: ItemContent;
 };
 
+export type NewItemsOutcome = {
+  readonly savedIds: readonly string[];
+  readonly conflictedIds: readonly string[];
+  readonly failedIds: readonly string[];
+  readonly error: AppError | null;
+};
+
+type PreparedItem = {
+  readonly item: NewItem;
+  readonly content: ItemContent;
+  readonly change: ItemChange;
+};
+
+const prepareNewItem = async (
+  vaultId: string,
+  item: NewItem,
+  now: string,
+): Promise<AppResult<PreparedItem>> => {
+  const normalized = normalizeItemContent(item.content);
+  if (!normalized.ok) return err(fromSealError(normalized.error));
+
+  const change = await withVaultKey(vaultId, async (key) =>
+    createItem(key, { itemId: item.itemId, vaultId, content: normalized.value, now }),
+  );
+  if (change === null) return err(sessionExpired());
+  if (!change.ok) return err(fromSealError(change.error));
+
+  return ok({ item, content: { ...normalized.value, updatedAt: now }, change: change.value });
+};
+
+const sendNewChanges = async (
+  changes: readonly ItemChange[],
+  nowMs: number,
+): Promise<AppResult<{ readonly applied: ReadonlySet<string>; readonly conflicted: ReadonlySet<string> }>> => {
+  if (isLocalSession()) {
+    const applied = new Set<string>();
+    const conflicted = new Set<string>();
+    for (const change of changes) {
+      const result = await applyLocalChange(change);
+      if (result.ok) applied.add(change.itemId);
+      else if (result.error.kind === "Conflict") conflicted.add(change.itemId);
+      else return applied.size > 0 ? ok({ applied, conflicted }) : result;
+    }
+    return ok({ applied, conflicted });
+  }
+
+  const token = await ensureToken(nowMs);
+  if (!token.ok) return token;
+
+  const result = await apiSyncPush({ changes: [...changes] }, token.value);
+  if (!result.ok) return err(lockIfSessionExpired(fromApiError(result.error)));
+
+  return ok({
+    applied: new Set(result.value.applied.map((applied) => applied.itemId)),
+    conflicted: new Set(result.value.conflicts.map((conflicted) => conflicted.itemId)),
+  });
+};
+
+export const pushNewItems = async (
+  vaultId: string,
+  items: readonly NewItem[],
+  nowMs: number,
+): Promise<NewItemsOutcome> => {
+  const now = new Date(nowMs).toISOString();
+  const savedIds: string[] = [];
+  const conflictedIds: string[] = [];
+  const failedIds: string[] = [];
+  let error: AppError | null = null;
+
+  for (let start = 0; start < items.length; start += SYNC_LIMITS.pushBatchSize) {
+    const batch = items.slice(start, start + SYNC_LIMITS.pushBatchSize);
+
+    if (error !== null) {
+      failedIds.push(...batch.map((item) => item.itemId));
+      continue;
+    }
+
+    const prepared: PreparedItem[] = [];
+    for (const item of batch) {
+      const ready = await prepareNewItem(vaultId, item, now);
+      if (ready.ok) prepared.push(ready.value);
+      else failedIds.push(item.itemId);
+    }
+    if (prepared.length === 0) continue;
+
+    const sent = await sendNewChanges(
+      prepared.map((entry) => entry.change),
+      nowMs,
+    );
+    if (!sent.ok) {
+      error = sent.error;
+      failedIds.push(...prepared.map((entry) => entry.item.itemId));
+      continue;
+    }
+
+    const unlocked = hasUnlockedVault(vaultId);
+    for (const entry of prepared) {
+      const id = entry.item.itemId;
+      if (sent.value.applied.has(id)) {
+        savedIds.push(id);
+        if (unlocked) upsertItem({ itemId: id, vaultId, version: entry.change.version, content: entry.content });
+      } else if (sent.value.conflicted.has(id)) {
+        conflictedIds.push(id);
+      } else {
+        failedIds.push(id);
+      }
+    }
+  }
+
+  return { savedIds, conflictedIds, failedIds, error };
+};
+
 export const saveNewItems = async (
   vaultId: string,
   items: readonly NewItem[],
   nowMs: number,
 ): Promise<AppResult<number>> => {
-  const now = new Date(nowMs).toISOString();
-  let saved = 0;
-
-  for (let start = 0; start < items.length; start += SYNC_LIMITS.pushBatchSize) {
-    const batch = items.slice(start, start + SYNC_LIMITS.pushBatchSize);
-    const changes: ItemChange[] = [];
-
-    for (const item of batch) {
-      const change = await withVaultKey(vaultId, async (key) =>
-        createItem(key, { itemId: item.itemId, vaultId, content: item.content, now }),
-      );
-      if (change === null) return err(sessionExpired());
-      if (!change.ok) return err(unexpected());
-      changes.push(change.value);
-    }
-
-    let appliedIds: ReadonlySet<string>;
-
-    if (isLocalSession()) {
-      appliedIds = new Set(changes.map((change) => change.itemId));
-      for (const change of changes) {
-        const applied = await applyLocalChange(change);
-        if (!applied.ok) return saved > 0 ? ok(saved) : applied;
-      }
-    } else {
-      const token = await ensureToken(nowMs);
-      if (!token.ok) return saved > 0 ? ok(saved) : token;
-
-      const result = await apiSyncPush({ changes }, token.value);
-      if (!result.ok) {
-        const failure = err(lockIfSessionExpired(fromApiError(result.error)));
-        return saved > 0 ? ok(saved) : failure;
-      }
-      setRevision(result.value.revision);
-      appliedIds = new Set(result.value.applied.map((applied) => applied.itemId));
-    }
-
-    for (const [index, item] of batch.entries()) {
-      const change = changes[index];
-      if (change === undefined || !appliedIds.has(item.itemId)) continue;
-      upsertItem({ itemId: item.itemId, vaultId, version: change.version, content: item.content });
-      saved += 1;
-    }
-  }
-
-  return ok(saved);
+  const outcome = await pushNewItems(vaultId, items, nowMs);
+  if (outcome.error !== null && outcome.savedIds.length === 0) return err(outcome.error);
+  return ok(outcome.savedIds.length);
 };
 
 export const deleteItemById = async (

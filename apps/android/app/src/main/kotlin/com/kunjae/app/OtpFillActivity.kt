@@ -12,8 +12,8 @@ import android.view.autofill.AutofillManager
 import android.view.autofill.AutofillValue
 import android.widget.RemoteViews
 import com.kunjae.client.LoginItem
+import com.kunjae.client.loginTotpCode
 import com.kunjae.crypto.CryptoResult
-import com.kunjae.crypto.totpFromSecretText
 
 @RequiresApi(Build.VERSION_CODES.P)
 class OtpFillActivity : Activity() {
@@ -52,7 +52,7 @@ class OtpFillActivity : Activity() {
             return
         }
 
-        if (SessionHolder.active() == null) {
+        if (SessionHolder.peek() == null) {
             finish()
             return
         }
@@ -66,7 +66,7 @@ class OtpFillActivity : Activity() {
             return
         }
 
-        val computed = totpFromSecretText(login.totpSecret, System.currentTimeMillis())
+        val computed = loginTotpCode(login, System.currentTimeMillis())
         if (computed !is CryptoResult.Ok) {
             finish()
             return
