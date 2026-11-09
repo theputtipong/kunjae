@@ -1,0 +1,128 @@
+name: Release Extension
+
+on:
+  push:
+    tags: ["extension-v*"]
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: "Submit for Chrome Web Store review right away"
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-extension
+  cancel-in-progress: false
+
+jobs:
+  release-extension:
+    name: Release Extension
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    # Environment name predates the release-<target> file naming and holds the store secrets.
+    environment: extension-release
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          # No cache: a release build must not restore anything a PR run could have written.
+          package-manager-cache: false
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Resolve version
+        id: version
+        run: bash scripts/ci/version-from-tag.sh extension-v
+
+      # Chrome and Firefox zips.
+      - name: Build
+        working-directory: apps/extension
+        env:
+          WXT_API_BASE_URL: ${{ vars.API_BASE_URL }}
+          VERSION: ${{ steps.version.outputs.name }}
+        run: |
+          set -euo pipefail
+          case "${WXT_API_BASE_URL}" in
+            https://*) ;;
+            *) echo "::error::var API_BASE_URL is not set (https)"; exit 1 ;;
+          esac
+          npm pkg set version="${VERSION}"
+          pnpm zip
+          pnpm zip -b firefox
+          ls -1 .output/*.zip
+
+      - name: Collect zips
+        id: files
+        env:
+          VERSION_NAME: ${{ steps.version.outputs.name }}
+          IS_TAG: ${{ startsWith(github.ref, 'refs/tags/extension-v') }}
+        run: |
+          set -euo pipefail
+          OUT="${RUNNER_TEMP}/extension"
+          mkdir -p "${OUT}"
+          cp apps/extension/.output/*.zip "${OUT}/"
+          if [ "$IS_TAG" = "true" ]; then BUILD="$VERSION_NAME"; else BUILD="$GITHUB_RUN_NUMBER"; fi
+          {
+            echo "dir=${OUT}"
+            echo "chrome=$(ls "${OUT}"/*-chrome.zip)"
+            echo "firefox=$(ls "${OUT}"/*-firefox.zip)"
+            echo "build=${BUILD}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: GitHub Release
+        if: startsWith(github.ref, 'refs/tags/extension-v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CHROME_ZIP: ${{ steps.files.outputs.chrome }}
+          FIREFOX_ZIP: ${{ steps.files.outputs.firefox }}
+          VERSION_NAME: ${{ steps.version.outputs.name }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" "${CHROME_ZIP}" "${FIREFOX_ZIP}" \
+            --title "Extension ${VERSION_NAME}" --generate-notes
+
+      - name: Upload zips
+        if: "!startsWith(github.ref, 'refs/tags/extension-v')"
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: kunjae-extension-${{ steps.files.outputs.build }}
+          path: ${{ steps.files.outputs.dir }}/*.zip
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Check config
+        id: config
+        env:
+          CWS_EXTENSION_ID: ${{ secrets.CWS_EXTENSION_ID }}
+        run: |
+          if [ -n "${CWS_EXTENSION_ID}" ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::CWS_EXTENSION_ID not set, skipping Chrome Web Store upload"
+          fi
+
+      # Kept on manual runs too: the `publish` input chooses draft upload vs submit for review.
+      - name: Upload to Chrome Web Store
+        if: steps.config.outputs.present == 'true'
+        env:
+          CWS_EXTENSION_ID: ${{ secrets.CWS_EXTENSION_ID }}
+          CWS_CLIENT_ID: ${{ secrets.CWS_CLIENT_ID }}
+          CWS_CLIENT_SECRET: ${{ secrets.CWS_CLIENT_SECRET }}
+          CWS_REFRESH_TOKEN: ${{ secrets.CWS_REFRESH_TOKEN }}
+          CWS_PUBLISH: ${{ github.event.inputs.publish || 'true' }}  # string input: 'false' stays 'false'; tag push -> 'true'
+          ZIP_PATH: ${{ steps.files.outputs.chrome }}
+        run: bash scripts/ci/cws-upload.sh
